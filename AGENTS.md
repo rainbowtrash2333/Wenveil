@@ -1,7 +1,7 @@
 # AGENTS.md — AI 助手项目指南
 
 > 本文档供 AI 编码助手在本项目中工作时阅读，统一项目背景、约定与工作方式。
-> 版本：V0.1（2026-09-12）｜状态：生效
+> 版本：V0.2（2026-09-12）｜状态：生效
 
 ## 1. 项目简介
 
@@ -51,9 +51,10 @@ AICanRead/
 ├── rules/           # 词典、机构关系注册表和公共机构白名单
 ├── tests/           # pytest 测试
 ├── skills/          # 项目级 AI skill
-├── test-artifacts/  # 测试/调试中间产物（不入库）
-├── output/          # 脱敏交付与映射（不入库）
-└── resouce/         # 本地原始用户资料（不入库）
+├── test-artifacts/  # 测试/调试及脱敏过程产物（不入库）
+│   ├── desensitization-inputs/  # 授权原始 OCR 输入（不入库）
+│   └── desensitization-outputs/ # 脱敏、恢复、审计与映射产物（不入库）
+└── pyproject.toml   # setuptools / 项目元数据
 ```
 
 ## 5. 代码规范
@@ -85,5 +86,6 @@ python -m desensitize --help
 3. **小步提交**：每个里程碑完成后再提交，提交信息说明改动与影响；分支与格式见 GIT-GUIDELINES。
 4. **改代码必须同步文档**：避免文档失真；代码与文档冲突时以代码为最终事实修正文档。
 5. **中间产物不入库**：统一放 `test-artifacts/`。
-6. **数据安全红线**：不得提交 `docs/*_merged.md`、`resouce/`、`output/`、mapping、密码、
+6. **数据安全红线**：不得提交 `docs/*_merged.md`、`test-artifacts/desensitization-inputs/`、
+   `test-artifacts/desensitization-outputs/`、mapping、密码、
    原始日志或其他用户数据；诊断输出只允许安全 ID、计数、行号、哈希和固定摘要。

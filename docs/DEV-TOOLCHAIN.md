@@ -33,9 +33,9 @@ python -m desensitize --help
 
 ```powershell
 $env:DESENSE_PASSWORD = "<local-only-password>"
-python -m desensitize mask .\tests\fixtures\sample.md -o .\test-artifacts\cli-output
-python -m desensitize audit .\test-artifacts\cli-output\document-<safe-id>.masked.md
-python -m desensitize restore .\test-artifacts\cli-output\document-<safe-id>.masked.md .\test-artifacts\cli-output\document-<safe-id>.mapping.enc -o .\test-artifacts\cli-output\restored.md
+python -m desensitize mask .\tests\fixtures\sample.md -o .\test-artifacts\desensitization-outputs
+python -m desensitize audit .\test-artifacts\desensitization-outputs\document-<safe-id>.masked.md
+python -m desensitize restore .\test-artifacts\desensitization-outputs\document-<safe-id>.masked.md .\test-artifacts\desensitization-outputs\document-<safe-id>.mapping.enc -o .\test-artifacts\desensitization-outputs\restored.md
 ```
 
 仓库当前没有 `tests/fixtures/` 固定夹具；真实验收必须使用临时目录和授权输入，禁止把用户资料写入 Git。
@@ -45,7 +45,7 @@ python -m desensitize restore .\test-artifacts\cli-output\document-<safe-id>.mas
 - 默认配置：`config/default.yaml`；包内部署副本：`desensitize/config/default.yaml`。
 - 公共机构白名单：`rules/organization_whitelist.txt`；包内副本：`desensitize/rules/organization_whitelist.txt`。
 - 常用运行方式：`python -m desensitize mask <input.md> --password <local-only-password>`。
-- 输出使用 `document-<safe-id>.<kind>`，输出目录默认是 `output/`，该目录已忽略。
+- 输出使用 `document-<safe-id>.<kind>`，输出目录默认是 `test-artifacts/desensitization-outputs/`，该目录已忽略；授权原始输入统一放在 `test-artifacts/desensitization-inputs/`。
 
 ## 5. 调试与失败排查
 

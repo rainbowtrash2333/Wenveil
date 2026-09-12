@@ -1,6 +1,6 @@
 # OCR 审计文档可逆脱敏系统实施方案
 
-> 版本：V0.2（2026-09-12）｜状态：生效
+> 版本：V0.3（2026-09-12）｜状态：生效
 > 当前代码入口、项目约束和文档导航见 [index.md](index.md)、[../AGENTS.md](../AGENTS.md) 和 [ADR-0001](adr/0001-hybrid-reversible-desensitization.md)。
 
 ## 1. 项目目标
@@ -1532,7 +1532,9 @@ desensitize/
 ├─ benchmarks/
 │  └─ benchmark.py
 │
-└─ output/
+└─ test-artifacts/
+   ├─ desensitization-inputs/
+   └─ desensitization-outputs/
 ```
 
 ---
@@ -1548,7 +1550,7 @@ xxx.md
 得到：
 
 ```text
-output/
+test-artifacts/desensitization-outputs/
 ├─ xxx.normalized.md
 ├─ xxx.masked.md
 ├─ xxx.mapping.enc
@@ -1605,8 +1607,8 @@ desense xxx.md -c config/default.yaml
 
 ```bash
 desense restore \
-  output/xxx.masked.md \
-  output/xxx.mapping.enc
+  test-artifacts/desensitization-outputs/xxx.masked.md \
+  test-artifacts/desensitization-outputs/xxx.mapping.enc
 ```
 
 查看识别情况：

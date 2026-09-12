@@ -1,6 +1,6 @@
 # 总体架构（ARCHITECTURE）
 
-> 版本：V0.1（2026-09-12）｜状态：生效
+> 版本：V0.2（2026-09-12）｜状态：生效
 > 本文档描述 AICanRead 的分层、核心概念、数据流与目录结构；模块职责与依赖
 > 规则见 [MODULES.md](./MODULES.md)。
 
@@ -30,7 +30,7 @@
 
 依赖方向：`CLI → Pipeline → Normalizer/Recognizers/Resolver/Mapping`。`training/` 可以复用
 `desensitize.models.Span` 等稳定数据结构；生产包不得反向导入 `training/`、`tests/`、
-`output/` 或用户资料目录。
+`test-artifacts/` 或用户资料目录。
 
 ## 3. 核心概念
 

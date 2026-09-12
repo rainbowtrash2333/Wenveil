@@ -1,6 +1,6 @@
 # 模块边界（MODULES）
 
-> 版本：V0.1（2026-09-12）｜状态：生效
+> 版本：V0.2（2026-09-12）｜状态：生效
 > 本文档定义 AICanRead 的模块职责、边界与依赖规则；分层总览见
 > [ARCHITECTURE.md](./ARCHITECTURE.md)。
 
@@ -34,7 +34,7 @@
 - `CLI → Pipeline → Normalizer/Recognizers/Resolver/Mapping`；禁止反向依赖 CLI。
 - `Recognizers → models.Span`；Recognizer 之间不得互相改写结果，通过 Pipeline 汇合。
 - `training → desensitize.models` 可接受；`desensitize → training` 禁止。
-- 生产代码不得读取 `output/`、`test-artifacts/` 或原始用户资料作为隐式配置。
+- 生产代码不得读取 `test-artifacts/desensitization-inputs/`、`test-artifacts/desensitization-outputs/` 或原始用户资料作为隐式配置。
 - 白名单、机构关系和词典必须来自配置/规则文件，不得散落硬编码在业务流程。
 
 **评审时按本节判定依赖违规。**

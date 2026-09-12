@@ -40,7 +40,12 @@ def _build_parser() -> argparse.ArgumentParser:
     mask = subparsers.add_parser("mask", help="normalize and desensitize a Markdown document")
     mask.add_argument("input", type=Path)
     _config_arg(mask)
-    mask.add_argument("-o", "--output", type=Path, default=Path("output"))
+    mask.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        default=Path("test-artifacts/desensitization-outputs"),
+    )
     mask.add_argument("--password", help="mapping encryption password (or DESENSE_PASSWORD)")
 
     restore = subparsers.add_parser("restore", help="restore a masked document")

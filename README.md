@@ -22,7 +22,7 @@ $env:DESENSE_PASSWORD = "change-me"
 python -m desensitize xxx.md
 ```
 
-默认输出到 `output/`：
+默认输出到 `test-artifacts/desensitization-outputs/`：
 
 ```text
 document-<safe-id>.normalized.md
@@ -31,15 +31,15 @@ document-<safe-id>.mapping.enc
 document-<safe-id>.report.json
 ```
 
-输出文件名使用不可逆的安全 ID，不沿用输入文件名。原始文件名仅作为加密映射中的可选元数据，只有显式使用 `--restore-filename` 才会恢复；普通还原仍输出安全文件名。
+输出文件名使用不可逆的安全 ID，不沿用输入文件名。原始文件名仅作为加密映射中的可选元数据，只有显式使用 `--restore-filename` 才会恢复；普通还原仍输出安全文件名。授权原始 OCR 输入可放在 `test-artifacts/desensitization-inputs/`，该目录与输出目录均不入库。
 
 还原和检查：
 
 ```powershell
-python -m desensitize restore output/xxx.masked.md output/xxx.mapping.enc --password "change-me"
+python -m desensitize restore test-artifacts/desensitization-outputs/xxx.masked.md test-artifacts/desensitization-outputs/xxx.mapping.enc --password "change-me"
 python -m desensitize inspect xxx.md
 python -m desensitize benchmark xxx.md
-python -m desensitize audit output/xxx.masked.md
+python -m desensitize audit test-artifacts/desensitization-outputs/xxx.masked.md
 ```
 
 `audit` 只输出行号、类别和安全摘要，不回显残留原文；空结果表示未发现当前审计规则覆盖的高风险字段或 Token/表格结构问题。

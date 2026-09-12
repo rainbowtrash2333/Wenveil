@@ -57,7 +57,8 @@ python -m desensitize --help
 ## 6. 测试产物与提交前清理
 
 截图、日志、崩溃堆栈、QA 记录和审计中间报告统一放在 `test-artifacts/`，不提交。
-脱敏输出、mapping、原始 `docs/*_merged.md`、`resouce/`、训练生成数据也不提交；`.gitignore`
+脱敏输出、mapping、原始 `docs/*_merged.md`、`test-artifacts/desensitization-inputs/`、
+`test-artifacts/desensitization-outputs/`、训练生成数据也不提交；`.gitignore`
 已经覆盖这些路径。若需要保存验收结论，只在 `docs/` 写不含敏感原值的摘要。
 
 ## 7. 提交前 Checklist

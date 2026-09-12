@@ -26,21 +26,24 @@ description: 对 OCR 后的 Markdown 或纯文本执行可逆、可审计的本�
 
    ```powershell
    $env:DESENSE_PASSWORD = '<strong-local-password>'
-   python -m desensitize mask '<input.md>' -o '.\output' --password $env:DESENSE_PASSWORD
+   python -m desensitize mask '<input.md>' -o '.\test-artifacts\desensitization-outputs' --password $env:DESENSE_PASSWORD
    ```
+
+   授权原始 OCR 输入统一放在 `test-artifacts/desensitization-inputs/`，生成的脱敏、恢复、审计和
+   mapping 产物统一放在 `test-artifacts/desensitization-outputs/`；两个目录均不入库。
 
 4. 脱敏后必须阅读生成的 `*.masked.md`，重点抽查标题、段落、表格、列表、页眉页脚、OCR 断行和实体相邻文本。阅读时不得把未脱敏原文复制到对话中。
 5. 对掩码文件执行审计：
 
    ```powershell
-   python -m desensitize audit '<output>\<name>.masked.md'
+   python -m desensitize audit '.\test-artifacts\desensitization-outputs\<name>.masked.md'
    ```
 
    审计结果必须无残留 PII、无 Markdown 结构损坏、无占位符冲突；如果有问题，先定位识别器/配置/解析边界，再修复并重新运行全流程。
 6. 对需要交付的结果执行恢复验证：
 
    ```powershell
-   python -m desensitize restore '<output>\<name>.masked.md' '<output>\<name>.mapping.enc' -o '<output>\<name>.restored.md' --password $env:DESENSE_PASSWORD
+   python -m desensitize restore '.\test-artifacts\desensitization-outputs\<name>.masked.md' '.\test-artifacts\desensitization-outputs\<name>.mapping.enc' -o '.\test-artifacts\desensitization-outputs\<name>.restored.md' --password $env:DESENSE_PASSWORD
    ```
 
    将恢复文件与规范化原文比较；应报告哈希或字节比较结果，不输出原文。只有恢复一致时，才宣称“可逆”。
