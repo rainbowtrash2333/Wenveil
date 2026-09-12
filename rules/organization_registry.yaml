@@ -1,0 +1,38 @@
+version: 1
+organizations:
+  - id: PICC_ASSET
+    canonical: 中国人保资产管理有限公司
+    aliases:
+      - 人保资产
+      - 中国人保资产
+      - 人保资产公司
+  - id: PICC_PROPERTY
+    canonical: 中国人民财产保险股份有限公司
+    aliases:
+      - 人保财险
+      - 人保财险公司
+  - id: PICC_CAPITAL
+    canonical: 人保资本保险资产管理有限公司
+    aliases:
+      - 人保资本
+      - 人保资本公司
+  - id: PICC_LIFE
+    canonical: 中国人民人寿保险股份有限公司
+    aliases:
+      - 人保寿险
+      - 人保寿险公司
+  - id: PICC_HEALTH
+    canonical: 中国人民健康保险股份有限公司
+    aliases:
+      - 人保健康险
+      - 人保健康
+  - id: PICC_GROUP
+    canonical: 中国人民保险集团股份有限公司
+    aliases:
+      - 中国人保
+      - 人保集团
+  - id: STATE_GRID_NEW
+    canonical: 国网新源控股有限公司
+    aliases:
+      - 国网新源
+      - 新源控股

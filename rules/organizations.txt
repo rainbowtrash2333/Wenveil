@@ -1,0 +1,13 @@
+# High-confidence organization and institution names used by the sample corpus.
+中国人民财产保险股份有限公司
+中国人民保险集团股份有限公司
+人保资本保险资产管理有限公司
+国网新源控股有限公司
+北京保实诚源股权投资合伙企业（有限合伙）
+国家电网公司
+中国银行
+招商银行
+中国保险资产管理业协会
+国家发展改革委
+中国证监会
+金融监督管理总局

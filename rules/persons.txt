@@ -1,0 +1,2 @@
+# Put high-confidence names here when a document set supplies a person dictionary.
+# Context rules remain enabled even when this file is empty.

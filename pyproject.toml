@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "local-desensitize"
+version = "0.1.0"
+description = "A reversible, OCR-aware local document anonymization engine"
+requires-python = ">=3.10"
+dependencies = [
+  "PyYAML>=6.0",
+  "cryptography>=41.0",
+]
+
+[project.scripts]
+desense = "desensitize.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["desensitize*", "training*"]
+
+[tool.setuptools.package-data]
+desensitize = ["config/*.yaml", "rules/*.txt", "rules/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"

@@ -1,0 +1,107 @@
+version: 1
+
+normalization:
+  unicode_nfkc: true
+  remove_han_spaces: true
+  merge_broken_lines: true
+  repair_id_card: true
+  repair_amount: true
+  repair_phone: true
+  allow_15_digit_id: false
+
+entities:
+  PERSON:
+    detect: true
+    anonymize: true
+    protect_when_disabled: true
+    priority: 70
+  ID_CARD:
+    detect: true
+    anonymize: true
+    protect_when_disabled: true
+    priority: 100
+  ORG:
+    detect: true
+    anonymize: true
+    protect_when_disabled: true
+    priority: 85
+  PROJECT:
+    detect: true
+    anonymize: true
+    protect_when_disabled: true
+    priority: 84
+  DEPARTMENT:
+    detect: true
+    anonymize: true
+    protect_when_disabled: true
+    priority: 78
+  ADDRESS:
+    detect: true
+    anonymize: true
+    protect_when_disabled: true
+    priority: 75
+  PHONE:
+    detect: true
+    anonymize: true
+    protect_when_disabled: true
+    priority: 97
+  EMAIL:
+    detect: true
+    anonymize: true
+    protect_when_disabled: true
+    priority: 96
+  BANK_ACCOUNT:
+    detect: true
+    anonymize: true
+    protect_when_disabled: true
+    priority: 96
+  CONTRACT_ID:
+    detect: true
+    anonymize: true
+    protect_when_disabled: true
+    priority: 95
+  DATE:
+    detect: true
+    anonymize: false
+    protect_when_disabled: true
+    priority: 88
+  AMOUNT:
+    detect: true
+    anonymize: false
+    protect_when_disabled: true
+    priority: 80
+  NUMBER:
+    detect: true
+    anonymize: false
+    protect_when_disabled: false
+    priority: 10
+
+dictionaries:
+  persons: ../rules/persons.txt
+  organizations: ../rules/organizations.txt
+  projects: ../rules/projects.txt
+  departments: ../rules/departments.txt
+
+whitelist:
+  organizations: ../rules/organization_whitelist.txt
+
+organization_registry: ../rules/organization_registry.yaml
+
+custom: []
+
+model:
+  enabled: false
+  backend: transformers
+  path: models/qwen3-1.7b-pii
+  local_files_only: true
+  chunk_size: 1024
+  overlap: 128
+  thresholds:
+    PERSON: 0.90
+    ORG: 0.92
+    PROJECT: 0.85
+    DEPARTMENT: 0.90
+    ADDRESS: 0.88
+
+ner:
+  enabled: false

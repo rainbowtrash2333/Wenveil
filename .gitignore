@@ -1,0 +1,54 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+output/
+test-output/
+*.mapping.enc
+*.masked.md
+*.normalized.md
+*.restored.md
+*.report.json
+docs/*_merged.md
+resouce/
+training/generated/
+training-data/
+training-output/
+models/
+.venv/
+venv/
+*.egg-info/
+.coverage
+htmlcov/
+
+# ── vibe-coding-bootstrap: 中间产物与构建产物（不入库）──
+# 构建产物
+build/
+dist/
+out/
+.gradle/
+target/
+# 测试/调试中间产物（见 docs/DEVELOPMENT-GUIDELINES.md）
+test-artifacts/
+# 本地配置（机器相关）
+local.properties
+.env
+.env.*
+# IDE
+.idea/
+.vscode/
+*.iml
+# 打包/归档产物（确有必须入库的测试夹具时用 !path 显式放行）
+*.zip
+*.7z
+# 缓存
+__pycache__/
+*.pyc
+node_modules/
+.cache/
+# 密钥与凭据
+*.keystore
+*.jks
+secrets.*
+# 系统
+Thumbs.db
+.DS_Store
