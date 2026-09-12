@@ -8,14 +8,14 @@ import pytest
 from desensitize import Desensitizer, MappingVault, load_config, restore_text
 
 
-ROOT = Path(__file__).resolve().parents[1]
+FIXTURE = Path(__file__).resolve().parent / "fixtures" / "financial_desensitization_sample.md"
 
 
 def test_xxx_md_default_policy_and_full_restore():
-    result = Desensitizer(load_config()).anonymize_file(ROOT / "xxx.md")
+    result = Desensitizer(load_config()).anonymize_file(FIXTURE)
 
     assert result.normalized_text == Desensitizer(load_config()).normalize(
-        (ROOT / "xxx.md").read_text(encoding="utf-8")
+        FIXTURE.read_text(encoding="utf-8")
     )
     assert result.normalized_text.count("中国人民财产保险股份有限公司") == 3
     assert re.search(r"⟦机构\d+⟧", result.masked_text)
@@ -163,7 +163,7 @@ custom:
 """,
         encoding="utf-8",
     )
-    result = Desensitizer(load_config(config_path)).anonymize_file(ROOT / "xxx.md")
+    result = Desensitizer(load_config(config_path)).anonymize_file(FIXTURE)
     assert "100万元" not in result.masked_text
     assert "⟦金额" in result.masked_text
     assert "⟦数字" in result.masked_text
@@ -188,7 +188,7 @@ def test_literal_compact_token_like_text_does_not_break_restore():
 
 
 def test_missing_mapping_entry_is_an_error():
-    result = Desensitizer(load_config()).anonymize_file(ROOT / "xxx.md")
+    result = Desensitizer(load_config()).anonymize_file(FIXTURE)
     token = next(iter(result.vault.token_to_surface))
     reduced = MappingVault(
         schema_version=result.vault.schema_version,
@@ -205,7 +205,7 @@ def test_missing_mapping_entry_is_an_error():
 
 
 def test_mapping_encryption_rejects_wrong_password(tmp_path: Path):
-    result = Desensitizer(load_config()).anonymize_file(ROOT / "xxx.md")
+    result = Desensitizer(load_config()).anonymize_file(FIXTURE)
     path = tmp_path / "sample.mapping.enc"
     result.vault.save(path, "correct horse")
     loaded = MappingVault.load(path, "correct horse")
@@ -236,7 +236,7 @@ custom:
 
 
 def test_large_repeated_input_completes_without_quadratic_replacement():
-    source = (ROOT / "xxx.md").read_text(encoding="utf-8") * 250
+    source = FIXTURE.read_text(encoding="utf-8") * 250
     result = Desensitizer(load_config()).anonymize(source)
     assert result.masked_text != source
     assert restore_text(result.masked_text, result.vault) == result.normalized_text

@@ -21,7 +21,7 @@ desense       Markdown/纯文本 → 脱敏文件 + 加密映射
 
 ```powershell
 python -m pip install -e .
-python -m desensitize xxx.md --password "change-me"
+python -m desensitize tests/fixtures/financial_desensitization_sample.md --password "change-me"
 ```
 
 需要 OCR 转换能力时安装可选依赖：
@@ -55,7 +55,7 @@ python -m organize .\test-artifacts\ocr-outputs\document-<safe-id>.ocr.md
 
 ```powershell
 $env:DESENSE_PASSWORD = "change-me"
-python -m desensitize xxx.md
+python -m desensitize tests/fixtures/financial_desensitization_sample.md
 ```
 
 默认输出到 `test-artifacts/desensitization-outputs/`：
@@ -73,8 +73,8 @@ document-<safe-id>.report.json
 
 ```powershell
 python -m desensitize restore test-artifacts/desensitization-outputs/xxx.masked.md test-artifacts/desensitization-outputs/xxx.mapping.enc --password "change-me"
-python -m desensitize inspect xxx.md
-python -m desensitize benchmark xxx.md
+python -m desensitize inspect tests/fixtures/financial_desensitization_sample.md
+python -m desensitize benchmark tests/fixtures/financial_desensitization_sample.md
 python -m desensitize audit test-artifacts/desensitization-outputs/xxx.masked.md
 ```
 

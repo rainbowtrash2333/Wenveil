@@ -54,7 +54,8 @@ AICanRead/
 ├── training/        # 离线训练数据、增强、验证与可选 Qwen 训练脚手架
 ├── config/          # 项目默认配置（含 config/ocr.yaml）
 ├── rules/           # 词典、机构关系注册表和公共机构白名单
-├── tests/           # pytest 测试
+├── tests/           # pytest 测试与合成回归夹具
+│   └── fixtures/    # 可重复测试用的非用户数据
 ├── skills/          # 项目级 AI skill
 ├── test-artifacts/  # 测试/调试及脱敏过程产物（不入库）
 │   ├── ocr-inputs/               # 授权 OCR 输入（不入库）

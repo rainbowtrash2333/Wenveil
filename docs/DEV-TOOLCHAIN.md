@@ -41,7 +41,7 @@ python -m desensitize audit .\test-artifacts\desensitization-outputs\document-<s
 python -m desensitize restore .\test-artifacts\desensitization-outputs\document-<safe-id>.masked.md .\test-artifacts\desensitization-outputs\document-<safe-id>.mapping.enc -o .\test-artifacts\desensitization-outputs\restored.md
 ```
 
-仓库当前没有 `tests/fixtures/` 固定夹具；真实验收必须使用临时目录和授权输入，禁止把用户资料写入 Git。
+仓库内的 `tests/fixtures/financial_desensitization_sample.md` 仅用于确定性回归；真实验收仍必须使用临时目录和授权输入，禁止把用户资料写入 Git。
 
 三模块可单独调用，也可按文件契约串联：
 
