@@ -1,7 +1,7 @@
 # 模块边界（MODULES）
 
 > 版本：V0.3（2026-09-12）｜状态：生效
-> 本文档定义 AICanRead 的模块职责、边界与依赖规则；分层总览见
+> 本文档定义 Wenveil（文隐）的模块职责、边界与依赖规则；分层总览见
 > [ARCHITECTURE.md](./ARCHITECTURE.md)。
 
 ## 1. 模块清单

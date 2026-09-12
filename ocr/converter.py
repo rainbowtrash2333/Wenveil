@@ -22,7 +22,7 @@ from ocr.config import Config
 from ocr.rapid_ocr import LocalOcrEngine, compress_image
 from ocr.safety import safe_id
 
-logger = logging.getLogger("aicanread.ocr")
+logger = logging.getLogger("wenveil.ocr")
 
 # ─── 扩展名分类 ────────────────────────────────────────────────
 

@@ -13,7 +13,7 @@ from typing import List, Tuple
 from ocr.config import OutputConfig
 from ocr.safety import safe_id
 
-logger = logging.getLogger("aicanread.ocr")
+logger = logging.getLogger("wenveil.ocr")
 
 
 def merge_results(

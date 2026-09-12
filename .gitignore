@@ -8,6 +8,25 @@ test-output/
 *.restored.md
 *.report.json
 docs/*_merged.md
+# Public-repository guardrails: raw document sources are never tracked.
+**/*.pdf
+**/*.doc
+**/*.docx
+**/*.xls
+**/*.xlsx
+**/*.ppt
+**/*.pptx
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.tif
+**/*.tiff
+**/*.zip
+**/*.7z
+# Client/project-specific rules and local configuration stay outside Git.
+rules/projects.local.txt
+desensitize/rules/projects.local.txt
+config/local*.yaml
 training/generated/
 training-data/
 training-output/

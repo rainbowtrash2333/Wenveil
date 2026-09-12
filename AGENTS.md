@@ -5,7 +5,7 @@
 
 ## 1. 项目简介
 
-**AICanRead** 是面向中文 OCR 金融、保险与投资文档的离线文档处理工具，包含三个可独立调用的
+**Wenveil（文隐）** 是面向中文 OCR 金融、保险与投资文档的离线文档处理工具，包含三个可独立调用的
 功能模块：`ocr/` 负责文档/图片转 Markdown，`organize/` 负责 OCR 文本确定性整理，
 `desensitize/` 负责可逆脱敏。脱敏系统以多路 Span 识别、统一冲突解析、短语义 Token 和
 AES-GCM 加密映射为核心；模型只能提出候选实体，不能改写原文。任何日志、报告和提交都不得泄露
@@ -42,7 +42,7 @@ AES-GCM 加密映射为核心；模型只能提出候选实体，不能改写原
 ## 4. 目录约定
 
 ```text
-AICanRead/
+Wenveil/
 ├── AGENTS.md
 ├── docs/            # 架构与决策文档，入口 docs/index.md
 │   ├── adr/         # 架构决策记录
@@ -53,7 +53,7 @@ AICanRead/
 ├── desensitize/     # 独立可逆脱敏模块：识别、解析、替换、恢复、审计、CLI
 ├── training/        # 离线训练数据、增强、验证与可选 Qwen 训练脚手架
 ├── config/          # 项目默认配置（含 config/ocr.yaml）
-├── rules/           # 词典、机构关系注册表和公共机构白名单
+├── rules/           # 公共词典、机构关系注册表和公共机构白名单（项目词典为空模板）
 ├── tests/           # pytest 测试与合成回归夹具
 │   └── fixtures/    # 可重复测试用的非用户数据
 ├── skills/          # 项目级 AI skill
@@ -97,7 +97,7 @@ python -m desensitize --help
 3. **小步提交**：每个里程碑完成后再提交，提交信息说明改动与影响；分支与格式见 GIT-GUIDELINES。
 4. **改代码必须同步文档**：避免文档失真；代码与文档冲突时以代码为最终事实修正文档。
 5. **中间产物不入库**：统一放 `test-artifacts/`。
-6. **数据安全红线**：不得提交 `docs/*_merged.md`、`test-artifacts/ocr-inputs/`、
+6. **数据安全红线**：不得提交原始文档、原始文件名、客户/项目专属规则、`docs/*_merged.md`、`test-artifacts/ocr-inputs/`、
    `test-artifacts/ocr-outputs/`、`test-artifacts/organized-outputs/`、
    `test-artifacts/desensitization-inputs/`、`test-artifacts/desensitization-outputs/`、mapping、密码、
    原始日志或其他用户数据；诊断输出只允许安全 ID、计数、行号、哈希和固定摘要。

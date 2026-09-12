@@ -1,7 +1,7 @@
 # 总体架构（ARCHITECTURE）
 
 > 版本：V0.3（2026-09-12）｜状态：生效
-> 本文档描述 AICanRead 的分层、核心概念、数据流与目录结构；模块职责与依赖
+> 本文档描述 Wenveil（文隐）的分层、核心概念、数据流与目录结构；模块职责与依赖
 > 规则见 [MODULES.md](./MODULES.md)。
 
 ## 1. 架构目标与约束
@@ -61,7 +61,7 @@ masked.md + mapping.enc → hash/authentication check → token restore → norm
 ## 5. 目录结构
 
 ```text
-AICanRead/
+Wenveil/
 ├── AGENTS.md
 ├── docs/
 ├── common/              # 共享确定性文本规整与安全 ID

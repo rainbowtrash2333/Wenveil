@@ -14,7 +14,7 @@ from ocr.config import LoggingConfig
 def setup_logging(config: LoggingConfig) -> logging.Logger:
     """初始化日志系统。
 
-    创建名为 "aicanread.ocr" 的 logger 实例，配置日志级别和格式化器，
+    创建名为 "wenveil.ocr" 的 logger 实例，配置日志级别和格式化器，
     同时添加控制台处理器和可选的日志文件处理器。
 
     Args:
@@ -23,7 +23,7 @@ def setup_logging(config: LoggingConfig) -> logging.Logger:
     Returns:
         配置完成的 Logger 实例。
     """
-    logger = logging.getLogger("aicanread.ocr")
+    logger = logging.getLogger("wenveil.ocr")
     logger.setLevel(getattr(logging, config.level.upper(), logging.INFO))
 
     formatter = logging.Formatter(config.format)

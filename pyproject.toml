@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "local-desensitize"
+name = "wenveil"
 version = "0.2.0"
-description = "Offline OCR, OCR text organization, and reversible document desensitization toolkit"
+description = "Wenveil (文隐): offline OCR, OCR text organization, and reversible document desensitization toolkit"
 requires-python = ">=3.10"
 dependencies = [
   "PyYAML>=6.0",

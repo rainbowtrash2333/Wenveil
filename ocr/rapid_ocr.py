@@ -20,7 +20,7 @@ from PIL import Image
 
 from ocr.config import OcrConfig
 
-logger = logging.getLogger("aicanread.ocr")
+logger = logging.getLogger("wenveil.ocr")
 
 
 def compress_image(image: Image.Image, max_size: int) -> Image.Image:

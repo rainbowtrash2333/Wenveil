@@ -27,7 +27,7 @@ from docling.models.base_ocr_model import BaseOcrModel
 
 from ocr.rapid_ocr import LocalOcrEngine
 
-_log = logging.getLogger("aicanread.ocr")
+_log = logging.getLogger("wenveil.ocr")
 
 
 class RapidOcrOptions(OcrOptions):
@@ -217,5 +217,5 @@ def register_rapidocr_engine() -> None:
 
     factory = get_ocr_factory(allow_external_plugins=False)
     if RapidOcrOptions not in factory.classes:
-        factory.register(RapidOcrModel, "aicanread_ocr", "ocr.ocr_engine")
+        factory.register(RapidOcrModel, "wenveil_ocr", "ocr.ocr_engine")
         _log.info("已将 RapidOCR 引擎注册到 Docling OCR 工厂")

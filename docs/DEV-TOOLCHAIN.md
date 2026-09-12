@@ -1,7 +1,7 @@
 # 开发工具链（DEV-TOOLCHAIN）
 
 > 版本：V0.3（2026-09-12）｜状态：生效
-> 本文档记录 AICanRead 的安装、编译、测试、调试和 CLI 验收命令。
+> 本文档记录 Wenveil（文隐）的安装、编译、测试、调试和 CLI 验收命令。
 
 ## 1. 环境要求
 
@@ -36,7 +36,7 @@ python -m organize --help
 
 ```powershell
 $env:DESENSE_PASSWORD = "<local-only-password>"
-python -m desensitize mask .\tests\fixtures\sample.md -o .\test-artifacts\desensitization-outputs
+python -m desensitize mask .\tests\fixtures\financial_desensitization_sample.md -o .\test-artifacts\desensitization-outputs
 python -m desensitize audit .\test-artifacts\desensitization-outputs\document-<safe-id>.masked.md
 python -m desensitize restore .\test-artifacts\desensitization-outputs\document-<safe-id>.masked.md .\test-artifacts\desensitization-outputs\document-<safe-id>.mapping.enc -o .\test-artifacts\desensitization-outputs\restored.md
 ```

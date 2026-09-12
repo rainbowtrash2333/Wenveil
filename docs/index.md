@@ -1,4 +1,4 @@
-# AICanRead 文档索引（INDEX）
+# Wenveil（文隐）文档索引（INDEX）
 
 > 版本：V0.4（2026-09-12）｜状态：生效
 > 本文档是 `docs/` 下全部项目文档的唯一入口。AI 助手开始任务前先阅读本文档，再按任务
@@ -17,6 +17,7 @@
 | Git 分支/提交 | [GIT-GUIDELINES.md](./GIT-GUIDELINES.md) | [DEVELOPMENT-GUIDELINES.md](./DEVELOPMENT-GUIDELINES.md) |
 | 版本信息/已实现功能/已知限制 | [APP-VERSION.md](./APP-VERSION.md) | [ROADMAP.md](./ROADMAP.md) |
 | 训练数据与可选小模型 | [../training/README.md](../training/README.md) | [ocr_desensitization_implementation_plan.md](./ocr_desensitization_implementation_plan.md) |
+| GitHub 公开发布与隐私边界 | [PUBLIC-RELEASE-CHECKLIST.md](./PUBLIC-RELEASE-CHECKLIST.md) | [../SECURITY.md](../SECURITY.md)、[../CONTRIBUTING.md](../CONTRIBUTING.md) |
 | 修改/新增文档 | [DOCUMENTATION-GUIDE.md](./DOCUMENTATION-GUIDE.md) | 本文档 |
 
 ## 2. 项目级文档（docs/ 根目录）
@@ -31,6 +32,7 @@
 | [DEV-TOOLCHAIN.md](./DEV-TOOLCHAIN.md) | 安装、编译、测试和 CLI 命令 | 构建、调试或验收 |
 | [APP-VERSION.md](./APP-VERSION.md) | 版本、能力、验证结果和限制 | 确认当前实现状态 |
 | [ROADMAP.md](./ROADMAP.md) | 阶段目标、里程碑和 ADR 索引 | 规划或变更路线 |
+| [PUBLIC-RELEASE-CHECKLIST.md](./PUBLIC-RELEASE-CHECKLIST.md) | GitHub 公开发布的数据边界与历史审计 | 首次公开或重新发布 |
 | [ocr_desensitization_implementation_plan.md](./ocr_desensitization_implementation_plan.md) | OCR 金融文档脱敏实施方案与验收标准 | 脱敏策略、模型和数据集改动 |
 
 ## 3. 专项文档与目录

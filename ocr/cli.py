@@ -11,7 +11,7 @@ from ocr.logger import setup_logging
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ocr-convert",
-        description="AICanRead OCR - 基于 Docling + 本地 RapidOCR 的批量文档转换工具",
+        description="Wenveil（文隐）OCR - 基于 Docling + 本地 RapidOCR 的批量文档转换工具",
     )
     parser.add_argument(
         "-c", "--config",
@@ -71,7 +71,7 @@ def main(argv: list[str] | None = None) -> None:
 
     # 初始化日志系统
     logger = setup_logging(config.logging)
-    logger.info("AICanRead OCR 模块启动")
+    logger.info("Wenveil OCR 模块启动")
     logger.info("输入目录已配置")
     logger.info("最大并发数: %d", config.concurrency.max_workers)
     logger.info("OCR 状态: %s", "启用" if config.ocr.enabled else "禁用")

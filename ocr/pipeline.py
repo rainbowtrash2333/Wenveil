@@ -17,7 +17,7 @@ from ocr.discover import discover_projects
 from ocr.merger import merge_results, write_merged_output
 from ocr.safety import safe_id
 
-logger = logging.getLogger("aicanread.ocr")
+logger = logging.getLogger("wenveil.ocr")
 
 
 def _create_progress_bar(total: int, show: bool):

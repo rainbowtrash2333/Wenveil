@@ -1,7 +1,11 @@
-# AICanRead — OCR、文本整理与可逆脱敏
+# Wenveil（文隐）— OCR、文本整理与可逆脱敏
 
 这是一个离线的中文文档处理工具，包含 OCR、OCR 文本整理、可逆脱敏三个可独立调用的模块。
 推荐处理顺序为：
+
+Wenveil (文隐) is the public project name and `wenveil` is the Python distribution name. The repository
+is designed for local, offline processing of authorized documents; it is not a place to publish source
+documents, filenames, masked outputs, mappings, passwords, or client-specific rule dictionaries.
 
 ```text
 OCR 文本 → 规整化 → 多路识别 → Span 冲突解析 → 一次性替换 → 加密映射
@@ -72,10 +76,10 @@ document-<safe-id>.report.json
 还原和检查：
 
 ```powershell
-python -m desensitize restore test-artifacts/desensitization-outputs/xxx.masked.md test-artifacts/desensitization-outputs/xxx.mapping.enc --password "change-me"
+python -m desensitize restore test-artifacts/desensitization-outputs/document-<safe-id>.masked.md test-artifacts/desensitization-outputs/document-<safe-id>.mapping.enc --password "change-me"
 python -m desensitize inspect tests/fixtures/financial_desensitization_sample.md
 python -m desensitize benchmark tests/fixtures/financial_desensitization_sample.md
-python -m desensitize audit test-artifacts/desensitization-outputs/xxx.masked.md
+python -m desensitize audit test-artifacts/desensitization-outputs/document-<safe-id>.masked.md
 ```
 
 `audit` 只输出行号、类别和安全摘要，不回显残留原文；空结果表示未发现当前审计规则覆盖的高风险字段或 Token/表格结构问题。
@@ -104,6 +108,13 @@ whitelist:
 ```
 
 白名单采用精确词典匹配，并以高优先级受保护 Span 进入统一冲突解析，不生成脱敏 Token。若白名单名称只是更长非白名单机构名称的一部分，则不会放行该子串，更长机构仍按普通 ORG 规则整体脱敏。新增或删除白名单名称只需修改词典文件，无需重新训练模型。
+
+### 公开仓库数据边界
+
+公开仓库只保留代码、通用规则、合成测试夹具和不含原文的文档。`rules/projects.txt` 是刻意留空的公开模板；
+客户、交易、项目和文档名称必须放在仓库外的本地配置中，不能通过提交脱敏文件、masked 文件名或 mapping
+来规避这一规则。发布前应同时检查当前工作树和 Git 可达历史，确保没有原始文档、原始文件名、OCR 输出、
+脱敏输出、mapping、密码或本地路径。
 
 固定词典使用内置 Aho–Corasick 实现；自定义规则支持 `literal`、`dictionary`、`regex` 和 `field`：
 

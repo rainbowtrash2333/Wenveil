@@ -12,7 +12,7 @@ from typing import Dict, List, Set
 from ocr.config import AppConfig
 from ocr.safety import safe_id
 
-logger = logging.getLogger("aicanread.ocr")
+logger = logging.getLogger("wenveil.ocr")
 
 
 def discover_projects(config: AppConfig) -> Dict[str, List[Path]]:
