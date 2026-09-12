@@ -147,3 +147,8 @@ entities:
 ```powershell
 pytest
 ```
+
+## License
+
+Wenveil（文隐） is released under the [Apache License 2.0](LICENSE). Optional OCR and model
+dependencies may carry their own license terms; review those terms before redistribution or commercial use.

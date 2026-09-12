@@ -1,16 +1,19 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "wenveil"
 version = "0.2.0"
 description = "Wenveil (文隐): offline OCR, OCR text organization, and reversible document desensitization toolkit"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 dependencies = [
   "PyYAML>=6.0",
   "cryptography>=41.0",
 ]
+classifiers = ["Programming Language :: Python :: 3"]
 
 [project.optional-dependencies]
 ocr = [

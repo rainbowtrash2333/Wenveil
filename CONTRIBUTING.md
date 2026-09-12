@@ -25,3 +25,8 @@ python -m desensitize --help
 
 Before opening a pull request, run the public-release checks and confirm that no sensitive path or value is
 present in the working tree or reachable history. Keep commits small and describe behavior changes clearly.
+
+## License
+
+Contributions to Wenveil are accepted under the Apache License 2.0. See [LICENSE](LICENSE) for the complete
+terms. Third-party dependencies and model weights retain their own licensing terms.
