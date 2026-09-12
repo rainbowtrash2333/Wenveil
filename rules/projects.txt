@@ -1,0 +1,5 @@
+# Public template: intentionally empty.
+#
+# Do not commit client, deal, project, or document names here. Keep authorized
+# project-specific values in a local ignored file and reference that file from
+# a private configuration passed with `python -m desensitize -c <local.yaml>`.
