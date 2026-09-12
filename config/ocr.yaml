@@ -1,0 +1,68 @@
+# AICanRead OCR 模块配置文件
+# 所有路径支持相对路径（相对于当前工作目录）和绝对路径
+
+# ─── 应用基本配置 ───
+app:
+  root_dir: "./test-artifacts/ocr-inputs"  # 授权原始输入；下一级子目录识别为"项目"
+  supported_extensions:             # 支持的文件扩展名（大小写不敏感）
+    - .pdf
+    - .docx
+    - .pptx
+    - .xlsx
+    - .jpg
+    - .jpeg
+    - .png
+    - .bmp
+    - .tiff
+    - .gif
+    - .txt
+    - .md
+    - .rtf
+    - .html
+    - .htm
+    - .xml
+    - .json
+    - .csv
+
+# ─── 本地 RapidOCR 配置 ───
+ocr:
+  enabled: true               # 是否启用 OCR
+  lang: ["ch"]                # OCR 语言列表: "ch"(中文), "en"(英文)
+  use_angle_cls: true         # 是否启用文字方向分类
+  use_gpu: false              # NVIDIA CUDA GPU 加速
+  use_dml: true              # AMD/Intel DirectML GPU 加速（与 use_gpu 互斥）
+  text_score: 0.5             # 文本识别置信度阈值
+  box_score: 0.3              # 文本检测置信度阈值
+  max_image_size: 3508         # 图片最大边长（像素），超过则等比压缩以节省内存，默认为A4 300ppi
+  image_scale: 1.0             # PDF OCR 页面图像放大倍率（1.0 为均衡值；精度不足可升 1.5~2.0，但耗时按面积增长）
+
+# ─── Docling PDF 流水线配置 ───
+docling:
+  images_scale: 0.25            # 页面位图渲染缩放。内存占用与其平方成正比，
+                                # 大扫描 PDF 报 std::bad_alloc 时调低（如 0.25~0.35）
+  num_threads: 2                # 推理/预处理线程数
+  queue_max_size: 5             # 页面处理队列容量
+  pdf_backend: pypdfium2        # PDF 解析后端: docling_parse | pypdfium2
+                                # docling_parse 在部分 PDF 上抛 std::bad_alloc，切 pypdfium2 可绕开
+  table_mode: fast              # 表格识别模式: accurate | fast
+                                # accurate 在个别扫描件上会陷入极慢路径（30分钟+无进展），
+                                # 批量任务建议 fast（表格结构略粗、速度大幅提升）
+  document_timeout: 1200        # 单文档超时（秒），超时跳过并在输出中标记，防止卡死整条流水线
+
+# ─── 并发处理配置 ───
+concurrency:
+  max_workers: 3                         # 并发 worker 数。4 以上会在多扫描件并发时内存不足导致原生崩溃（std::bad_alloc / 0x40010004）
+  show_progress: true                    # 显示 tqdm 进度条
+
+# ─── 输出配置 ───
+output:
+  directory: "./test-artifacts/ocr-outputs"              # 与原始输入分离的输出目录
+  merged_filename_template: "document-{safe_id}.ocr.md"  # 不泄露项目名的安全文件名
+  encoding: "utf-8"                                      # 输出文件编码
+  file_separator: "\n\n# ----- {filename} -----\n\n"       # 文件间分隔符模板
+
+# ─── 日志配置 ───
+logging:
+  level: "DEBUG"                          # 日志级别: DEBUG/INFO/WARNING/ERROR/CRITICAL
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "./test-artifacts/logs/ocr.log"  # 日志文件（设为 null 可仅输出到控制台）

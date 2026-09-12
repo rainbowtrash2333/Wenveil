@@ -1,13 +1,15 @@
 # AGENTS.md — AI 助手项目指南
 
 > 本文档供 AI 编码助手在本项目中工作时阅读，统一项目背景、约定与工作方式。
-> 版本：V0.2（2026-09-12）｜状态：生效
+> 版本：V0.3（2026-09-12）｜状态：生效
 
 ## 1. 项目简介
 
-**AICanRead** 是面向中文 OCR 金融、保险与投资文档的离线可逆脱敏引擎。系统以确定性
-文本规整、多路 Span 识别、统一冲突解析、短语义 Token 和 AES-GCM 加密映射为核心；模型
-只能提出候选实体，不能改写原文。任何日志、报告和提交都不得泄露用户原始文档或映射密码。
+**AICanRead** 是面向中文 OCR 金融、保险与投资文档的离线文档处理工具，包含三个可独立调用的
+功能模块：`ocr/` 负责文档/图片转 Markdown，`organize/` 负责 OCR 文本确定性整理，
+`desensitize/` 负责可逆脱敏。脱敏系统以多路 Span 识别、统一冲突解析、短语义 Token 和
+AES-GCM 加密映射为核心；模型只能提出候选实体，不能改写原文。任何日志、报告和提交都不得泄露
+用户原始文档或映射密码。
 
 ## 2. 开工前必读（重要）
 
@@ -45,15 +47,21 @@ AICanRead/
 ├── docs/            # 架构与决策文档，入口 docs/index.md
 │   ├── adr/         # 架构决策记录
 │   └── archive/     # 历史设计资料
-├── desensitize/     # 生产代码：规整、识别、解析、替换、恢复、审计、CLI
+├── common/          # 三个功能模块共享的纯确定性工具（文本规整、安全 ID）
+├── ocr/             # 独立 OCR/文档转换模块：Docling + RapidOCR + CLI
+├── organize/        # 独立 OCR 文本整理模块：Markdown/纯文本规整 + CLI
+├── desensitize/     # 独立可逆脱敏模块：识别、解析、替换、恢复、审计、CLI
 ├── training/        # 离线训练数据、增强、验证与可选 Qwen 训练脚手架
-├── config/          # 项目默认配置
+├── config/          # 项目默认配置（含 config/ocr.yaml）
 ├── rules/           # 词典、机构关系注册表和公共机构白名单
 ├── tests/           # pytest 测试
 ├── skills/          # 项目级 AI skill
 ├── test-artifacts/  # 测试/调试及脱敏过程产物（不入库）
-│   ├── desensitization-inputs/  # 授权原始 OCR 输入（不入库）
-│   └── desensitization-outputs/ # 脱敏、恢复、审计与映射产物（不入库）
+│   ├── ocr-inputs/               # 授权 OCR 输入（不入库）
+│   ├── ocr-outputs/              # OCR 转换输出（不入库）
+│   ├── organized-outputs/        # OCR 文本整理输出（不入库）
+│   ├── desensitization-inputs/   # 授权脱敏输入（不入库）
+│   └── desensitization-outputs/  # 脱敏、恢复、审计与映射产物（不入库）
 └── pyproject.toml   # setuptools / 项目元数据
 ```
 
@@ -70,12 +78,14 @@ AICanRead/
 ```powershell
 # 安装/构建检查
 python -m pip install -e .
-python -m compileall -q desensitize training
+python -m compileall -q common desensitize ocr organize training
 
 # 单元与集成回归
 pytest -q
 
 # CLI 冒烟
+python -m ocr --help
+python -m organize --help
 python -m desensitize --help
 ```
 
@@ -86,6 +96,7 @@ python -m desensitize --help
 3. **小步提交**：每个里程碑完成后再提交，提交信息说明改动与影响；分支与格式见 GIT-GUIDELINES。
 4. **改代码必须同步文档**：避免文档失真；代码与文档冲突时以代码为最终事实修正文档。
 5. **中间产物不入库**：统一放 `test-artifacts/`。
-6. **数据安全红线**：不得提交 `docs/*_merged.md`、`test-artifacts/desensitization-inputs/`、
-   `test-artifacts/desensitization-outputs/`、mapping、密码、
+6. **数据安全红线**：不得提交 `docs/*_merged.md`、`test-artifacts/ocr-inputs/`、
+   `test-artifacts/ocr-outputs/`、`test-artifacts/organized-outputs/`、
+   `test-artifacts/desensitization-inputs/`、`test-artifacts/desensitization-outputs/`、mapping、密码、
    原始日志或其他用户数据；诊断输出只允许安全 ID、计数、行号、哈希和固定摘要。

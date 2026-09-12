@@ -1,6 +1,6 @@
 # 模块边界（MODULES）
 
-> 版本：V0.2（2026-09-12）｜状态：生效
+> 版本：V0.3（2026-09-12）｜状态：生效
 > 本文档定义 AICanRead 的模块职责、边界与依赖规则；分层总览见
 > [ARCHITECTURE.md](./ARCHITECTURE.md)。
 
@@ -8,9 +8,12 @@
 
 | 模块 | 职责 | 代码位置 |
 |------|------|----------|
-| CLI | 参数解析、安全文件名、mask/restore/inspect/audit/benchmark | `desensitize/cli.py` |
+| Common | 共享确定性文本规整与安全 ID，不识别实体 | `common/` |
+| OCR | 文档/图片/文本转换为 Markdown，Docling + RapidOCR | `ocr/` |
+| Organize | OCR Markdown/纯文本整理，不执行识别或脱敏 | `organize/` |
+| Desensitize CLI | 参数解析、安全文件名、mask/restore/inspect/audit/benchmark | `desensitize/cli.py` |
 | Pipeline | 编排规整、识别、白名单嵌套过滤、解析、替换和报告 | `desensitize/pipeline.py` |
-| Normalizer | Unicode、OCR 空格、断行及结构字段规整 | `desensitize/normalizer/` |
+| Normalizer | Unicode、OCR 空格、断行及结构字段规整 | `common/text_normalizer.py`、`desensitize/normalizer/` |
 | Recognizers | 规则、词典、机构关系和可选模型候选识别 | `desensitize/recognizers/` |
 | Resolver | 确定性冲突消解与保护 Span 选择 | `desensitize/resolver.py` |
 | Mapping | compact Token、AES-GCM 映射、哈希校验和恢复 | `desensitize/mapping.py` |
@@ -22,7 +25,9 @@
 ## 2. 各模块职责
 
 - CLI 只负责交互与文件落盘，不实现实体识别规则。
-- Pipeline 是唯一编排入口；Recognizer 不得自行改写文本或写文件。
+- OCR、Organize、Desensitize 各自有独立 CLI；模块之间通过 Markdown/纯文本文件契约组合。
+- OCR 的 Docling/RapidOCR 依赖属于可选依赖，不能在导入脱敏或整理模块时强制加载。
+- 每个功能模块只保留一个编排入口；Recognizer 不得自行改写文本或写文件。
 - Normalizer 只做确定性规整，不判断业务实体。
 - Resolver 不读取配置文件或 mapping，只对 Span 进行确定性选择。
 - Mapping 不重新识别实体；恢复必须先校验密文和 masked/normalized 哈希。
@@ -31,7 +36,8 @@
 
 ## 3. 依赖规则（强制）
 
-- `CLI → Pipeline → Normalizer/Recognizers/Resolver/Mapping`；禁止反向依赖 CLI。
+- `ocr/cli → ocr/pipeline`、`organize/cli → organize/core`、`desensitize/cli → desensitize/pipeline`；禁止跨功能模块反向依赖。
+- 三个功能模块可依赖 `common/`；禁止 `ocr/`、`organize/` 依赖 `desensitize/pipeline`。
 - `Recognizers → models.Span`；Recognizer 之间不得互相改写结果，通过 Pipeline 汇合。
 - `training → desensitize.models` 可接受；`desensitize → training` 禁止。
 - 生产代码不得读取 `test-artifacts/desensitization-inputs/`、`test-artifacts/desensitization-outputs/` 或原始用户资料作为隐式配置。
@@ -50,6 +56,6 @@
 ## 5. 构建与测试
 
 ```powershell
-python -m compileall -q desensitize training
+python -m compileall -q common desensitize ocr organize training
 pytest -q
 ```

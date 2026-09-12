@@ -32,6 +32,11 @@ description: 对 OCR 后的 Markdown 或纯文本执行可逆、可审计的本�
    授权原始 OCR 输入统一放在 `test-artifacts/desensitization-inputs/`，生成的脱敏、恢复、审计和
    mapping 产物统一放在 `test-artifacts/desensitization-outputs/`；两个目录均不入库。
 
+   项目还提供两个可独立调用的前置模块：`python -m ocr` 负责文档/图片转 Markdown，
+   `python -m organize` 负责 OCR 文本整理；需要时按 `ocr → organize → desensitize` 的文件契约串联，
+   不要在脱敏模块中直接加载 OCR 重依赖。OCR 输入/输出分别使用 `test-artifacts/ocr-inputs/` 和
+   `test-artifacts/ocr-outputs/`，整理输出使用 `test-artifacts/organized-outputs/`。
+
 4. 脱敏后必须阅读生成的 `*.masked.md`，重点抽查标题、段落、表格、列表、页眉页脚、OCR 断行和实体相邻文本。阅读时不得把未脱敏原文复制到对话中。
 5. 对掩码文件执行审计：
 

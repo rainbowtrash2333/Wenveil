@@ -1,6 +1,6 @@
 # 架构决策记录（ADR）
 
-> 版本：V0.2（2026-09-12）｜状态：生效
+> 版本：V0.3（2026-09-12）｜状态：生效
 
 本目录存放 AICanRead 的重大技术决策记录。**技术路线变更必须先在此记录讨论，
 再实施**（见 [../DOCUMENTATION-GUIDE.md](../DOCUMENTATION-GUIDE.md) §5.4）。
@@ -40,3 +40,4 @@
 | ADR | 主题 | 状态 |
 |-----|------|------|
 | [ADR-0001](./0001-hybrid-reversible-desensitization.md) | 混合式确定性可逆脱敏、加密映射与公共机构白名单边界 | 已接受 |
+| [ADR-0002](./0002-independent-processing-modules.md) | OCR、文本整理与脱敏模块独立化 | 已接受 |

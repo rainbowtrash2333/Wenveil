@@ -1,6 +1,7 @@
-# Local OCR document desensitizer
+# AICanRead — OCR、文本整理与可逆脱敏
 
-这是一个离线、可逆的 Markdown 文档脱敏引擎。处理顺序固定为：
+这是一个离线的中文文档处理工具，包含 OCR、OCR 文本整理、可逆脱敏三个可独立调用的模块。
+推荐处理顺序为：
 
 ```text
 OCR 文本 → 规整化 → 多路识别 → Span 冲突解析 → 一次性替换 → 加密映射
@@ -8,12 +9,47 @@ OCR 文本 → 规整化 → 多路识别 → Span 冲突解析 → 一次性替
 
 识别器不会修改文本；所有偏移量都指向规整后的文本。还原时校验映射中的哈希，发现密码错误、映射被篡改、文本被替换或 Token 缺失会直接失败。
 
+模块也可以单独调用：
+
+```text
+ocr-convert   文档/图片 → Markdown
+organize-text OCR Markdown/纯文本 → 整理后的 Markdown
+desense       Markdown/纯文本 → 脱敏文件 + 加密映射
+```
+
 ## 安装与运行
 
 ```powershell
 python -m pip install -e .
 python -m desensitize xxx.md --password "change-me"
 ```
+
+需要 OCR 转换能力时安装可选依赖：
+
+```powershell
+python -m pip install -e ".[ocr]"
+```
+
+### OCR 转换
+
+默认读取 `config/ocr.yaml`，授权原始输入建议放在 `test-artifacts/ocr-inputs/`，输出放在
+`test-artifacts/ocr-outputs/`；输出文件名使用安全 ID。
+
+```powershell
+python -m ocr --help
+python -m ocr --config config/ocr.yaml --root-dir .\test-artifacts\ocr-inputs --no-progress
+```
+
+### OCR 文本整理
+
+整理只做 Unicode、OCR 空格、结构字段、断行、分页标记和 Markdown 噪声整理，不识别实体，也不执行脱敏。
+
+```powershell
+python -m organize --help
+python -m organize .\test-artifacts\ocr-outputs\document-<safe-id>.ocr.md
+```
+
+默认整理输出到 `test-artifacts/organized-outputs/`，可用 `-o` 指定文件或目录。
 
 也可以通过环境变量提供密码：
 

@@ -4,19 +4,38 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "local-desensitize"
-version = "0.1.0"
-description = "A reversible, OCR-aware local document anonymization engine"
+version = "0.2.0"
+description = "Offline OCR, OCR text organization, and reversible document desensitization toolkit"
 requires-python = ">=3.10"
 dependencies = [
   "PyYAML>=6.0",
   "cryptography>=41.0",
 ]
 
+[project.optional-dependencies]
+ocr = [
+  "docling>=2.0.0",
+  "tqdm>=4.66.0",
+  "Pillow>=10.0",
+  "opencv-python-headless>=4.8.0",
+  "numpy>=1.24.0",
+  "rapidocr>=3.8.1",
+  "onnxruntime>=1.17.0",
+]
+ocr-directml = [
+  "onnxruntime-directml>=1.24.4",
+]
+ocr-cuda = [
+  "onnxruntime-gpu>=1.17.0",
+]
+
 [project.scripts]
 desense = "desensitize.cli:main"
+ocr-convert = "ocr.cli:main"
+organize-text = "organize.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["desensitize*", "training*"]
+include = ["common*", "desensitize*", "ocr*", "organize*", "training*"]
 
 [tool.setuptools.package-data]
 desensitize = ["config/*.yaml", "rules/*.txt", "rules/*.yaml"]

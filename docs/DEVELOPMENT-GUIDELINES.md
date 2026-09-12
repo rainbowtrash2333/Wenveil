@@ -1,6 +1,6 @@
 # 开发规范（DEVELOPMENT-GUIDELINES）
 
-> 版本：V0.2（2026-09-12）｜状态：生效
+> 版本：V0.3（2026-09-12）｜状态：生效
 > 本文档定义 AICanRead 的 Python 开发、测试、审计和质量门禁；代码评审与提交以此为准。
 
 ## 1. 总则
@@ -14,8 +14,8 @@
 
 ## 2. 分层与代码规范
 
-- CLI 只负责参数、路径和输出；核心逻辑位于 `desensitize/`。
-- 依赖方向固定为 `CLI → Pipeline → Normalizer/Recognizers/Resolver/Mapping`；生产代码不得导入 `training/`、`tests/` 或读取用户输出目录。
+- CLI 只负责参数、路径和输出；核心逻辑位于各自的功能模块包。
+- 依赖方向固定为 `CLI → Module Pipeline`；OCR、Organize、Desensitize 不得互相导入业务实现，均可依赖 `common/`；生产代码不得导入 `training/`、`tests/` 或读取用户输出目录。
 - Python 遵循 PEP 8；公开函数、类和模块接口使用类型提示，命名采用 `snake_case`/`PascalCase`。
 - `Span` 是识别器和解析器之间的主要数据结构；识别器只读文本并返回候选，不改写文本。
 - 新规则优先放入 `config/` 或 `rules/`；新增白名单名称必须有回归测试和边界说明。
@@ -43,22 +43,25 @@
 - 测试文件使用 `test_*.py`；测试函数命名为行为和预期结果，例如 `test_whitelist_keeps_public_name`。
 - 每个测试聚焦一个行为点；外部路径使用 `tmp_path`，不依赖当前机器的固定用户目录。
 - 公开 API 变化必须同步 README、架构/模块文档和版本说明。
-- 当前质量门禁是：`compileall` 通过、`pytest -q` 全绿、CLI 关键流程通过、`git diff --check` 无错误。
+- 当前质量门禁是：`compileall` 通过、`pytest -q` 全绿、三个 CLI 关键流程通过、`git diff --check` 无错误。
 - 不设置未经测量的覆盖率数字作为假验收；需要覆盖率时使用独立报告记录实际数值。
 
 ## 5. 运行命令
 
 ```powershell
-python -m compileall -q desensitize training
+python -m compileall -q common desensitize ocr organize training
 pytest -q
 python -m desensitize --help
+python -m ocr --help
+python -m organize --help
 ```
 
 ## 6. 测试产物与提交前清理
 
 截图、日志、崩溃堆栈、QA 记录和审计中间报告统一放在 `test-artifacts/`，不提交。
-脱敏输出、mapping、原始 `docs/*_merged.md`、`test-artifacts/desensitization-inputs/`、
-`test-artifacts/desensitization-outputs/`、训练生成数据也不提交；`.gitignore`
+OCR/整理/脱敏输出、mapping、原始 `docs/*_merged.md`、`test-artifacts/desensitization-inputs/`、
+`test-artifacts/desensitization-outputs/`、`test-artifacts/ocr-inputs/`、`test-artifacts/ocr-outputs/`、
+`test-artifacts/organized-outputs/`、训练生成数据也不提交；`.gitignore`
 已经覆盖这些路径。若需要保存验收结论，只在 `docs/` 写不含敏感原值的摘要。
 
 ## 7. 提交前 Checklist
@@ -66,6 +69,6 @@ python -m desensitize --help
 - [ ] 代码改动有对应单元/集成测试。
 - [ ] 相关 CLI 流程已冒烟，失败路径没有绕过安全校验。
 - [ ] 配置、规则、skill 和文档已同步。
-- [ ] `python -m compileall -q desensitize training` 通过。
+- [ ] `python -m compileall -q common desensitize ocr organize training` 通过。
 - [ ] `pytest -q` 通过。
 - [ ] `git diff --check` 通过，`git status` 没有原始资料、输出或测试产物。

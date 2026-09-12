@@ -1,6 +1,6 @@
 # AICanRead 文档索引（INDEX）
 
-> 版本：V0.3（2026-09-12）｜状态：生效
+> 版本：V0.4（2026-09-12）｜状态：生效
 > 本文档是 `docs/` 下全部项目文档的唯一入口。AI 助手开始任务前先阅读本文档，再按任务
 > 场景阅读对应文档。
 
@@ -10,6 +10,7 @@
 |----------|------|------|
 | 了解项目全貌、当前阶段 | [../AGENTS.md](../AGENTS.md) + [ROADMAP.md](./ROADMAP.md) | [APP-VERSION.md](./APP-VERSION.md) |
 | 架构分层、依赖规则、数据流 | [ARCHITECTURE.md](./ARCHITECTURE.md) + [MODULES.md](./MODULES.md) | [ADR-0001](./adr/0001-hybrid-reversible-desensitization.md) |
+| OCR/文本整理/脱敏模块调用 | [ARCHITECTURE.md](./ARCHITECTURE.md) + [DEV-TOOLCHAIN.md](./DEV-TOOLCHAIN.md) | [../README.md](../README.md) |
 | 修改脱敏识别、白名单或占位符 | [ocr_desensitization_implementation_plan.md](./ocr_desensitization_implementation_plan.md) | [ARCHITECTURE.md](./ARCHITECTURE.md)、[MODULES.md](./MODULES.md) |
 | 编写/评审代码与测试 | [DEVELOPMENT-GUIDELINES.md](./DEVELOPMENT-GUIDELINES.md) | [MODULES.md](./MODULES.md) |
 | 构建/安装/调试 | [DEV-TOOLCHAIN.md](./DEV-TOOLCHAIN.md) | [../README.md](../README.md) |
@@ -35,6 +36,8 @@
 ## 3. 专项文档与目录
 
 - [../skills/ocr-desensitization/SKILL.md](../skills/ocr-desensitization/SKILL.md)：AI 调用脱敏、审计、恢复和敏感信息输出约束。
+- [../ocr/README.md](../ocr/README.md)：OCR 文档转换模块的安装、配置和 CLI。
+- [../organize/README.md](../organize/README.md)：OCR 文本整理模块的输入、输出和 CLI。
 - [../training/README.md](../training/README.md)：金融领域合成数据、标签校验、OCR 增强和可选 Qwen 训练入口。
 - [adr/](./adr/)：已接受的架构决策记录。
 - [archive/](./archive/)：历史设计资料，仅作背景参考；当前实施以本索引和实施方案为准。
@@ -53,6 +56,8 @@
 - 新增、改名、移动或删除 `docs/` 下文档时，必须同步更新本文档及受影响的相对链接。
 - 每份生效文档顶部必须有版本、日期和状态；现状、规划和限制必须明确区分。
 - 原始用户文档、脱敏输出、映射密文、训练生成数据和测试产物不纳入 Git；规则、代码、测试和可复现脚本可以纳入 Git。
-- 授权原始 OCR 输入统一放在 `test-artifacts/desensitization-inputs/`，脱敏、恢复和审计产物统一放在 `test-artifacts/desensitization-outputs/`；两个目录均不入库。
+- OCR 输入/输出分别放在 `test-artifacts/ocr-inputs/`、`test-artifacts/ocr-outputs/`，整理输出放在
+  `test-artifacts/organized-outputs/`；脱敏授权输入放在 `test-artifacts/desensitization-inputs/`，
+  脱敏、恢复和审计产物放在 `test-artifacts/desensitization-outputs/`；这些目录均不入库。
 - 写作规范、同步核对和冲突处理见 [DOCUMENTATION-GUIDE.md](./DOCUMENTATION-GUIDE.md)。
 - 文档与代码冲突时，先以可验证的代码行为为事实，再按同步矩阵修正文档。

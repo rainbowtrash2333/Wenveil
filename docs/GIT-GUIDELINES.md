@@ -31,9 +31,9 @@
 ```bash
 git status --short
 git diff --check
-python -m compileall -q desensitize training
+python -m compileall -q common desensitize ocr organize training
 pytest -q
 ```
 
-涉及 CLI 行为时补跑 `python -m desensitize --help` 和本地无敏感测试夹具的 mask/audit/restore
-冒烟流程。任何失败或环境缺失必须在交付说明中明确记录，不能用其他测试替代。
+涉及 CLI 行为时补跑 `python -m desensitize --help`、`python -m ocr --help`、
+`python -m organize --help` 和本地无敏感测试夹具的流程冒烟。任何失败或环境缺失必须在交付说明中明确记录，不能用其他测试替代。
