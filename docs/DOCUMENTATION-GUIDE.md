@@ -1,6 +1,6 @@
 # 文档管理手册（DOCUMENTATION-GUIDE）
 
-> 版本：V0.2（2026-09-12）｜状态：生效
+> 版本：V0.3（2026-09-14）｜状态：生效
 > 本文档定义 Wenveil（文隐）的**文档管理规范**：文档如何组织、如何写作、如何与代码
 > 保持同步、冲突如何处理。任何文档新增/修改/删除前，先读本文档与 [index.md](./index.md)。
 
@@ -24,8 +24,11 @@ docs/
 ├── DEV-TOOLCHAIN.md
 ├── APP-VERSION.md
 ├── ROADMAP.md
+├── PUBLIC-RELEASE-CHECKLIST.md
+├── ocr_desensitization_implementation_plan.md   # 脱敏设计规格与验收
+├── UI/                         # 桌面端 UI 设计与验收
 ├── adr/                        # 决策记录
-└── archive/                    # 历史设计与方案资料
+└── archive/                    # 历史设计与方案资料（当前无归档文件）
 ```
 
 ### 2.1 文档分类
@@ -34,9 +37,9 @@ docs/
 |------|------|----------|
 | 项目级 | `docs/` 根目录 | 全局/跨模块决策 |
 | 专项 | `docs/<topic>/` | 子系统相关 |
-| UI 设计稿 | `docs/design/`（如项目有 UI） | 页面实现/审查时使用；无 UI 项目不创建此目录 |
+| UI 设计稿 | `docs/UI/`（如项目有 UI） | 页面实现/审查时使用；无 UI 项目不创建此目录 |
 | 决策记录 | `docs/adr/` | 重大技术路线变更 |
-| 历史归档 | `docs/<topic>/archive/` | 方案完成后 |
+| 历史归档 | `docs/archive/` | 方案完成后 |
 | 工具链 README | 各脚本目录内 | 脚本接口变更时 |
 
 ## 3. 文档与代码同步原则（核心）
@@ -89,7 +92,7 @@ docs/
 技术路线变更先在 `docs/adr/` 记录讨论再实施；实施后同步 `ARCHITECTURE.md`、`ROADMAP.md`。
 
 ### 5.5 已完成方案归档
-已完成的方案移入 `<topic>/archive/`，文件名附完成日期；归档前把仍有效的契约与限制
+已完成的方案移入 `docs/archive/`，文件名附完成日期；归档前把仍有效的契约与限制
 同步到正式文档；`index.md` 的快速决策表必须指向当前入口，不指向归档。
 
 ## 6. 索引与检索（docs/index.md）

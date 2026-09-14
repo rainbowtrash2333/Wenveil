@@ -182,6 +182,6 @@ python -m training.export_onnx `
 训练代码或 checkpoint optimizer 状态，ONNX 结果仍进入现有 Span Resolver、mapping 和
 audit 流程。
 
-## 无模型权重的离线流程
+## 模型与替换的边界
 
 模型只产生 token 标签，原文替换仍由现有脱敏核心负责。

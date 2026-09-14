@@ -1,6 +1,6 @@
 # 总体架构（ARCHITECTURE）
 
-> 版本：V0.4（2026-09-14）｜状态：生效
+> 版本：V0.5（2026-09-14）｜状态：生效
 > 本文档描述 Wenveil（文隐）的分层、核心概念、数据流与目录结构；模块职责与依赖
 > 规则见 [MODULES.md](./MODULES.md)。
 
@@ -89,4 +89,4 @@ Wenveil/
 - [ADR-0002：OCR、文本整理与脱敏模块独立化](./adr/0002-independent-processing-modules.md)
 - [ADR-0003：Tauri 桌面端与 Python Sidecar](./adr/0003-tauri-desktop-ui.md)
 - [ADR-0004：Qwen3.5 Token Classification 与 ONNX 离线部署](./adr/0004-qwen35-token-classification-onnx.md)
-- 详细演进方案见 [OCR 脱敏实施方案](./ocr_desensitization_implementation_plan.md)。
+- 脱敏识别、Resolver、白名单与验收的详细规格见 [脱敏设计规格](./ocr_desensitization_implementation_plan.md)。

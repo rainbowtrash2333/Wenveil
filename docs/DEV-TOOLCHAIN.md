@@ -1,6 +1,6 @@
 # 开发工具链（DEV-TOOLCHAIN）
 
-> 版本：V0.5（2026-09-14）｜状态：生效
+> 版本：V0.6（2026-09-14）｜状态：生效
 > 本文档记录 Wenveil（文隐）的安装、编译、测试、调试和 CLI 验收命令。
 
 ## 1. 环境要求
@@ -48,14 +48,15 @@ npm --prefix desktop run dev:http -- --host 127.0.0.1 --port 5173
 ```powershell
 cd desktop
 python bridge/build_release.py `
-  --qwen-model D:\models\qwen3-1.7b-pii `
-  --ocr-models D:\models\rapidocr
+  --qwen-model ..\training-output\qwen3.5-2b-ner `
+  --ocr-models ..\models\rapidocr
 ```
 
 脚本会在构建前校验 Qwen 微调 checkpoint（`config.json` 与权重文件）和 RapidOCR
 权重目录；任一缺失都会终止，不会生成标称“满血版”的残缺发布包。输出目录为
-`desktop/release/Wenveil/`，其中模型分别位于 `models/qwen3-1.7b-pii/` 和
-`models/ocr/`。程序启动时只从该目录读取模型，不联网下载。
+`desktop/release/Wenveil/`，打包时 Qwen checkpoint 被复制为 `models/qwen3-1.7b-pii/`
+（脚本内置的发布目录名，与基座版本无关），OCR 权重复制为 `models/ocr/`。
+程序启动时只从该目录读取模型，不联网下载。
 `npm run tauri:build` 已指向这一完整模型发布流程；`tauri:build:dir` 仅保留为不带模型的开发基线构建。
 
 ## 3. 测试与 CLI 冒烟
@@ -100,9 +101,9 @@ python -m desensitize mask .\test-artifacts\organized-outputs\document-<safe-id>
 2. 再执行与改动相关的 pytest 文件，最后执行 `pytest -q`。
 3. CLI 失败时只保留退出码、类别、行号、哈希和固定摘要；原文、映射明文和密码不得写日志。
 4. 测试日志、审计报告和截图写入 `test-artifacts/`，该目录不入库；桌面浏览器验收脚本也只允许写入该目录。
-6. OCR 原始输入/输出分别使用 `test-artifacts/ocr-inputs/`、`test-artifacts/ocr-outputs/`；整理输出使用
+5. OCR 原始输入/输出分别使用 `test-artifacts/ocr-inputs/`、`test-artifacts/ocr-outputs/`；整理输出使用
    `test-artifacts/organized-outputs/`；这些目录均不入库。
-7. 恢复失败先检查 mapping 密码、masked 文件是否被改动以及 mapping 中绑定的哈希，不绕过校验。
+6. 恢复失败先检查 mapping 密码、masked 文件是否被改动以及 mapping 中绑定的哈希，不绕过校验。
 
 ## 6. 训练入口
 
@@ -113,7 +114,7 @@ python -m desensitize mask .\test-artifacts\organized-outputs\document-<safe-id>
 
 ```powershell
 python scripts/validate_dataset.py --data-dir .\data --split all
-python -m training.train_token_classifier --data-dir .\data --model models\qwen-base --output-dir training-output\qwen-external
+python -m training.train_token_classifier --data-dir .\data --model models\qwen3.5-2b-base --output-dir training-output\qwen-external
 python -m training.evaluate --data-dir .\data --split all --model training-output\qwen-external
 ```
 

@@ -1,6 +1,6 @@
 # Wenveil（文隐）文档索引（INDEX）
 
-> 版本：V0.5（2026-09-14）｜状态：生效
+> 版本：V0.6（2026-09-14）｜状态：生效
 > 本文档是 `docs/` 下全部项目文档的唯一入口。AI 助手开始任务前先阅读本文档，再按任务
 > 场景阅读对应文档。
 
@@ -17,7 +17,6 @@
 | 桌面端 UI 实现与验收 | [UI/UI设计方案.md](./UI/UI设计方案.md) | [adr/0003-tauri-desktop-ui.md](./adr/0003-tauri-desktop-ui.md)、`../desktop/` |
 | Git 分支/提交 | [GIT-GUIDELINES.md](./GIT-GUIDELINES.md) | [DEVELOPMENT-GUIDELINES.md](./DEVELOPMENT-GUIDELINES.md) |
 | 版本信息/已实现功能/已知限制 | [APP-VERSION.md](./APP-VERSION.md) | [ROADMAP.md](./ROADMAP.md) |
-| Web 端 AI 项目上下文与 Vibe Coding 提示词 | [VIBE-CODING-CONTEXT.md](./VIBE-CODING-CONTEXT.md) | `.codex/agents/`、[AGENTS.md](../AGENTS.md) |
 | 训练数据与可选小模型 | [../training/README.md](../training/README.md) | [ADR-0004](./adr/0004-qwen35-token-classification-onnx.md)、[ocr_desensitization_implementation_plan.md](./ocr_desensitization_implementation_plan.md) |
 | GitHub 公开发布与隐私边界 | [PUBLIC-RELEASE-CHECKLIST.md](./PUBLIC-RELEASE-CHECKLIST.md) | [../SECURITY.md](../SECURITY.md)、[../CONTRIBUTING.md](../CONTRIBUTING.md) |
 | 修改/新增文档 | [DOCUMENTATION-GUIDE.md](./DOCUMENTATION-GUIDE.md) | 本文档 |
@@ -35,9 +34,8 @@
 | [APP-VERSION.md](./APP-VERSION.md) | 版本、能力、验证结果和限制 | 确认当前实现状态 |
 | [ROADMAP.md](./ROADMAP.md) | 阶段目标、里程碑和 ADR 索引 | 规划或变更路线 |
 | [PUBLIC-RELEASE-CHECKLIST.md](./PUBLIC-RELEASE-CHECKLIST.md) | GitHub 公开发布的数据边界与历史审计 | 首次公开或重新发布 |
-| [ocr_desensitization_implementation_plan.md](./ocr_desensitization_implementation_plan.md) | OCR 金融文档脱敏实施方案与验收标准 | 脱敏策略、模型和数据集改动 |
+| [ocr_desensitization_implementation_plan.md](./ocr_desensitization_implementation_plan.md) | 脱敏设计规格、测试要求与验收标准（不含已由其他文档覆盖的架构与命令） | 脱敏策略、识别规则和验收标准改动 |
 | [UI/UI设计方案.md](./UI/UI设计方案.md) | Wenveil 桌面端页面、流程和交互设计 | 桌面端 UI 实现与审查 |
-| [VIBE-CODING-CONTEXT.md](./VIBE-CODING-CONTEXT.md) | 面向 Web 端 AI 的项目事实、custom agents 和可复制提示词 | 外部 AI 协作、Vibe Coding 提示词设计 |
 
 ## 3. 专项文档与目录
 
@@ -47,7 +45,6 @@
 - [../training/README.md](../training/README.md)：金融领域合成数据、固定外部 split 适配、标签校验、OCR 增强和可选 Qwen 训练入口。
 - [adr/0004-qwen35-token-classification-onnx.md](./adr/0004-qwen35-token-classification-onnx.md)：Qwen3.5 token classification、best checkpoint、ONNX/DirectML/CPU 离线部署边界。
 - [adr/](./adr/)：已接受的架构决策记录。
-- [archive/](./archive/)：历史设计资料，仅作背景参考；当前实施以本索引和实施方案为准。
 
 桌面端 UI 设计与实现位于 `docs/UI/` 和 `desktop/`；桌面端技术路线与 Python Sidecar 边界见
 [ADR-0003](./adr/0003-tauri-desktop-ui.md)。

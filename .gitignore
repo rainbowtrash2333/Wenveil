@@ -45,6 +45,10 @@ out/
 .gradle/
 target/
 desktop/release/
+desktop/sidecar-build/
+desktop/sidecar-dist/
+desktop/sidecar-spec/
+desktop/src-tauri/gen/
 # 授权原始输入与脱敏输出统一归档到 test-artifacts/（见 docs/DEVELOPMENT-GUIDELINES.md）
 # 测试/调试中间产物（见 docs/DEVELOPMENT-GUIDELINES.md）
 test-artifacts/

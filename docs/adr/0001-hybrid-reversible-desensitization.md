@@ -1,9 +1,8 @@
 # ADR-0001：混合式确定性可逆脱敏架构
 
-> 版本：V0.1（2026-09-12）｜状态：生效
-> 状态：已接受
+> 版本：V0.2（2026-09-14）｜状态：已接受
 > 日期：2026-09-12
-> 关联：[ARCHITECTURE.md](../ARCHITECTURE.md)、[MODULES.md](../MODULES.md)、[实施方案](../ocr_desensitization_implementation_plan.md)
+> 关联：[ARCHITECTURE.md](../ARCHITECTURE.md)、[MODULES.md](../MODULES.md)、[脱敏设计规格](../ocr_desensitization_implementation_plan.md)
 
 ## 背景
 

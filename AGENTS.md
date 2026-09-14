@@ -1,7 +1,7 @@
 # AGENTS.md — AI 助手项目指南
 
 > 本文档供 AI 编码助手在本项目中工作时阅读，统一项目背景、约定与工作方式。
-> 版本：V0.3（2026-09-12）｜状态：生效
+> 版本：V0.4（2026-09-14）｜状态：生效
 
 ## 1. 项目简介
 
@@ -47,7 +47,7 @@ Wenveil/
 ├── AGENTS.md
 ├── docs/            # 架构与决策文档，入口 docs/index.md
 │   ├── adr/         # 架构决策记录
-│   └── archive/     # 历史设计资料
+│   └── UI/          # 桌面端 UI 设计与验收
 ├── common/          # 三个功能模块共享的纯确定性工具（文本规整、安全 ID）
 ├── ocr/             # 独立 OCR/文档转换模块：Docling + RapidOCR + CLI
 ├── organize/        # 独立 OCR 文本整理模块：Markdown/纯文本规整 + CLI

@@ -1,6 +1,6 @@
 # ADR-0003：Tauri 桌面端与 Python Sidecar
 
-> 版本：V0.1（2026-09-12）｜状态：已接受
+> 版本：V0.2（2026-09-14）｜状态：已接受
 
 ## 背景
 
@@ -19,10 +19,12 @@ Wenveil 已有可独立调用的 Python OCR、文本整理和可逆脱敏模块�
 ## 影响
 
 - Python 三模块仍保持独立，桌面端只依赖其公开 CLI/编排接口，不把业务识别逻辑复制到前端。
-- 安装和构建增加 Node、Rust/Tauri 以及 Python Sidecar 打包步骤；基础 Python CLI 不受影响。
-- 原有“项目没有 GUI”的现状描述必须同步更新为“桌面端已实现/开发中”，并在版本、工具链、架构和模块文档中登记。
+- 安装和构建增加 Node、Rust/Tauri 以及 Python Sidecar 打包步骤；当前已支持 PyInstaller onedir
+  sidecar 与模型目录组装为 Windows 目录分发，基础 Python CLI 不受影响。
+- 文档需明确桌面端当前为开发版，并同步记录其 Sidecar、浏览器适配器与原生桥接边界。
 - 桌面端测试分为前端类型/组件检查、浏览器开发模式用户流程和 Python 既有全量回归；不把浏览器 mock 流程当作生产 Sidecar 验收。
 
-## 未决事项
+## 现状与未决事项
 
-- PyInstaller onedir 与 Tauri `externalBin` 的最终发布签名和安装包矩阵留给后续交付里程碑；开发模式先使用仓库内 Python Sidecar。
+- PyInstaller onedir 与模型目录的目录分发已具备；Tauri bundle/NSIS 仍未启用。
+- 最终发布签名、升级/回滚演练和安装包矩阵留给后续交付里程碑；开发模式仍可使用仓库内 Python Sidecar。

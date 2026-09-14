@@ -15,7 +15,7 @@ developer_instructions = '''
 
 后端核验：
 
-1. `python -m compileall -q desensitize ocr organize training`
+1. `python -m compileall -q common desensitize ocr organize training`
 2. 先运行相关测试，再运行 `pytest -q`
 3. 核验相关 CLI `--help`
 4. 使用临时安全夹具验证 `OCR → organize → mask → audit → restore` 可按任意合法步骤组合执行。

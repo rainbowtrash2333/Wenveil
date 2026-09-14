@@ -1,6 +1,6 @@
 # ADR-0002：OCR、文本整理与脱敏模块独立化
 
-> 状态：已接受
+> 版本：V0.1（2026-09-12）｜状态：已接受
 > 日期：2026-09-12
 > 关联：[ARCHITECTURE.md](../ARCHITECTURE.md)、[MODULES.md](../MODULES.md)、[DEV-TOOLCHAIN.md](../DEV-TOOLCHAIN.md)
 

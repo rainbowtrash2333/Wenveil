@@ -67,7 +67,7 @@ cargo check --manifest-path desktop/src-tauri/Cargo.toml
 ```
 
 需要浏览器验收时，先启动 `python desktop/bridge/http_dev_server.py`，再运行
-`npm --prefix desktop run dev:http -- --host 127.0.0.1 --port 5173`。HTTP 适配器只用于本机开发，Python Sidecar 的离线打包尚未开启。
+`npm --prefix desktop run dev:http -- --host 127.0.0.1 --port 5173`。HTTP 适配器只用于本机开发；桌面发布使用目录分发（PyInstaller onedir sidecar 与模型目录组装），安装包签名和升级/回滚尚未进行。
 
 也可以通过环境变量提供密码：
 

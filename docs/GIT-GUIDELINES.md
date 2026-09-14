@@ -1,6 +1,6 @@
 # Git 分支与提交规范（GIT-GUIDELINES）
 
-> 版本：V0.1（2026-09-12）｜状态：生效
+> 版本：V0.2（2026-09-14）｜状态：生效
 > 本文档与 `AGENTS.md`、`DEVELOPMENT-GUIDELINES.md` 配套使用；是 Git 相关最高约束。
 
 ## 1. 分支职责
@@ -15,7 +15,7 @@
 - 推荐格式：`<type>(<scope>): <summary>`，例如 `fix(core): 收紧启动校验`。
 - `type` 使用 `feat`、`fix`、`test`、`docs`、`refactor`、`build` 或 `chore`。
 - 提交前必须确认代码、测试和文档已经同步；未验证的能力不得写成已完成。
-- 需要提交`.codex`下的配置
+- 需要提交 `.codex/` 下的 agent 配置，与项目文档一起维护。
 
 ## 3. 禁止入库内容
 

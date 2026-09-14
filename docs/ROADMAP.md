@@ -1,6 +1,6 @@
 # 路线图（ROADMAP）
 
-> 版本：V0.4（2026-09-14）｜状态：生效
+> 版本：V0.5（2026-09-14）｜状态：生效
 > 本文档定义 Wenveil（文隐）的阶段目标与里程碑；当前能力清单见
 > [APP-VERSION.md](./APP-VERSION.md)。
 
@@ -40,7 +40,7 @@
 - [x] 移植独立 OCR 转换模块，提供 `ocr` CLI 和可选重依赖。
 - [x] 提取独立 OCR 文本整理模块，提供 `organize` CLI；三个功能模块可单独调用。
 - [x] 建立 Tauri + React 桌面开发 UI，覆盖处理、恢复、进度、结果和设置；通过 JSON Lines Sidecar 复用 Python 模块。
-- [ ] 完成 Python Sidecar 的离线发布捆绑、安装包签名和升级/回滚演练。
+- [ ] 完成离线发布包签名和升级/回滚演练；PyInstaller onedir sidecar 与模型目录已可组装为目录分发。
 - [ ] 批量目录处理、任务级安全 ID 和可观测计数。
 - [ ] 建立不同文档规模的吞吐/内存基线，评估 ONNX 或量化部署。
 - [x] 完成 Qwen3.5 ONNX 导出、PyTorch/ORT parity 和 DirectML 优先/CPU 回退适配；固定长度图的性能基线仍待建立。
