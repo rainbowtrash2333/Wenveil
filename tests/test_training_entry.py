@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from desensitize.config import load_config
 from desensitize.models import Span
 from training.train_token_classifier import (
     FeatureAlignmentError,
@@ -14,7 +15,11 @@ from training.train_token_classifier import (
 )
 from training.benchmark import build_benchmark_samples
 from training.build_dataset import write_jsonl
-from training.download_qwen import main as download_qwen_main
+from training.download_qwen import (
+    DEFAULT_OUTPUT,
+    DEFAULT_REPOSITORY,
+    main as download_qwen_main,
+)
 from training.evaluate import EntityMetrics, metrics_report
 from training.samples import sample_from_spans
 
@@ -156,3 +161,16 @@ def test_download_verify_only_writes_safe_local_manifest(tmp_path: Path, capsys)
     manifest = json.loads((tmp_path / "download_manifest.json").read_text(encoding="utf-8"))
     assert manifest["repository"] == "local"
     assert "model_family" in capsys.readouterr().out
+
+
+def test_qwen_download_defaults_match_disabled_onnx_configs():
+    project_config = load_config("config/default.yaml")
+    package_config = load_config("desensitize/config/default.yaml")
+
+    assert DEFAULT_REPOSITORY == "Qwen/Qwen3.5-2B"
+    assert DEFAULT_OUTPUT == Path("models/qwen3.5-2b-base")
+    assert project_config.model["path"].endswith("qwen3.5-2b-ner-onnx")
+    assert package_config.model["path"].endswith("qwen3.5-2b-ner-onnx")
+    assert project_config.model["enabled"] is False
+    assert package_config.model["enabled"] is False
+    assert project_config.model["backend"] == package_config.model["backend"] == "onnx"

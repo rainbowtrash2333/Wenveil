@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_REPOSITORY = "Qwen/Qwen3.5-0.8B"
-DEFAULT_OUTPUT = Path("models/qwen3.5-0.8b-base")
+DEFAULT_REPOSITORY = "Qwen/Qwen3.5-2B"
+DEFAULT_OUTPUT = Path("models/qwen3.5-2b-base")
 REQUIRED_FILES = ("config.json", "tokenizer.json", "tokenizer_config.json")
 
 

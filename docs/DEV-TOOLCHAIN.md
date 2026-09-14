@@ -1,6 +1,6 @@
 # 开发工具链（DEV-TOOLCHAIN）
 
-> 版本：V0.4（2026-09-14）｜状态：生效
+> 版本：V0.5（2026-09-14）｜状态：生效
 > 本文档记录 Wenveil（文隐）的安装、编译、测试、调试和 CLI 验收命令。
 
 ## 1. 环境要求
@@ -132,11 +132,15 @@ Qwen3.5 的本地训练、独立评估和 ONNX 导出：
 
 ```powershell
 python -m pip install -e ".[model]"
-python -m training.download_qwen --repository Qwen/Qwen3.5-0.8B --output-dir models/qwen3.5-0.8b-base
+python -m training.download_qwen --repository Qwen/Qwen3.5-2B --output-dir models/qwen3.5-2b-base
 python -m training.train_token_classifier --input training/generated/financial_alias/financial_alias_ner.jsonl --prepare-dir training-data/splits --seed 42
-python -m training.train_token_classifier --train training-data/splits/train.jsonl --validation training-data/splits/validation.jsonl --model models/qwen3.5-0.8b-base --output-dir training-output/qwen3.5-0.8b-ner --seed 42
-python -m training.evaluate --input training-data/splits/test.jsonl --model training-output/qwen3.5-0.8b-ner --output test-artifacts/qwen35-test-metrics.json
-python -m training.export_onnx --checkpoint training-output/qwen3.5-0.8b-ner --output-dir models/qwen3.5-0.8b-ner-onnx
+python -m training.train_token_classifier --train training-data/splits/train.jsonl --validation training-data/splits/validation.jsonl --model models/qwen3.5-2b-base --output-dir training-output/qwen3.5-2b-ner --seed 42
+python -m training.evaluate --input training-data/splits/test.jsonl --model training-output/qwen3.5-2b-ner --output test-artifacts/qwen35-test-metrics.json
+python -m training.export_onnx --checkpoint training-output/qwen3.5-2b-ner --output-dir models/qwen3.5-2b-ner-onnx
 ```
 
-ONNX 运行时从部署目录读取 `model.onnx`、external-data 文件、`tokenizer.json`、标签映射和运行配置；Windows `auto` 先尝试 `DmlExecutionProvider`，不可用时回退 CPU。当前导出图为固定序列长度，导出器会在 manifest 中记录 PyTorch/ORT parity；正式上线前仍需用授权语料完成质量门槛。
+训练保留完整 Qwen3.5-2B base checkpoint 及其视觉权重，不要手工删除；部署由
+`training/export_onnx.py` 只导出 `input_ids`、`attention_mask`、`position_ids` 到文本 NER
+ONNX，不携带视觉输入图。
+
+默认 2B 基座相比更小模型需要更多磁盘和运行内存；ONNX 运行时从部署目录读取 `model.onnx`、external-data 文件、`tokenizer.json`、标签映射和运行配置；Windows `auto` 先尝试 `DmlExecutionProvider`，不可用时回退 CPU。当前导出图为固定序列长度，导出器会在 manifest 中记录 PyTorch/ORT parity；正式上线前仍需用授权语料完成质量门槛。

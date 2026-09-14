@@ -85,7 +85,7 @@ python scripts/validate_dataset.py --data-dir .\data --split all
 真实数据目录只通过 `--data-dir` 传入，默认值为相对当前目录的 `data`，不写入或复制数据：
 
 ```powershell
-python -m training.train_token_classifier --data-dir .\data --model models\qwen3.5-0.8b-base --output-dir training-output\qwen-external
+python -m training.train_token_classifier --data-dir .\data --model models\qwen3.5-2b-base --output-dir training-output\qwen-external
 python -m training.evaluate --data-dir .\data --split test --model training-output\qwen-external
 python -m training.evaluate --data-dir .\data --split hard_test --model training-output\qwen-external
 python -m training.evaluate --data-dir .\data --split all --model training-output\qwen-external
@@ -98,20 +98,25 @@ python -m training.evaluate --data-dir .\data --split all --model training-outpu
 `clean_text`、relations 或真实 ID。旧的 `--input`、`--train`、`--validation` 和
 `--prepare-dir` 合成/兼容流程仍保留。
 
-当前默认基座是官方 `Qwen/Qwen3.5-0.8B`。模型权重不入库，先显式下载到本地：
+当前默认基座是官方 `Qwen/Qwen3.5-2B`。2B 基座相比更小模型需要更多磁盘和运行内存；模型权重不入库，先显式下载到本地：
 
 ```powershell
 python -m pip install -e ".[model]"
 python -m training.download_qwen `
-  --repository Qwen/Qwen3.5-0.8B `
-  --output-dir models/qwen3.5-0.8b-base
+  --repository Qwen/Qwen3.5-2B `
+  --output-dir models/qwen3.5-2b-base
 ```
+
+`models/qwen3.5-2b-base/` 保留完整 Qwen3.5-2B 基座及其视觉权重，训练阶段不要手工删除
+这些权重。部署阶段由 `training/export_onnx.py` 只导出 `input_ids`、`attention_mask`、
+`position_ids` 到文本 NER ONNX，不携带视觉输入图；部署目录因此是文本 NER 图，不是手工裁剪
+后的 base checkpoint。
 
 下载脚本会检查 `config.json`、fast tokenizer 和 safetensors 权重，并写入被忽略的
 `download_manifest.json`。训练和评估默认使用 `local_files_only=true`；断网时不会回退到
 Hub 或缓存中的其他模型。
 
-已有下载目录可用 `python -m training.download_qwen --output-dir models/qwen3.5-0.8b-base --verify-only`
+已有下载目录可用 `python -m training.download_qwen --output-dir models/qwen3.5-2b-base --verify-only`
 离线复核，不会访问网络。
 
 先按文档 ID 切分，再训练。滑窗使用 tokenizer 的 overflow offsets；窗口边缘只覆盖实体
@@ -127,8 +132,8 @@ python -m training.train_token_classifier `
 python -m training.train_token_classifier `
   --train training-data/splits/train.jsonl `
   --validation training-data/splits/validation.jsonl `
-  --model models/qwen3.5-0.8b-base `
-  --output-dir training-output/qwen3.5-0.8b-ner `
+  --model models/qwen3.5-2b-base `
+  --output-dir training-output/qwen3.5-2b-ner `
   --max-length 1024 `
   --overlap 128 `
   --seed 42
@@ -144,7 +149,7 @@ Linear token head，模型只输出候选标签，不改写文本。
 ```powershell
 python -m training.evaluate `
   --input training-data/splits/test.jsonl `
-  --model training-output/qwen3.5-0.8b-ner `
+  --model training-output/qwen3.5-2b-ner `
   --output test-artifacts/qwen3.5-test-metrics.json
 ```
 
@@ -158,7 +163,7 @@ hard-negative 子集会分别统计。仓库内合成数据只能验证流程，
 python -m training.benchmark --output training-data/qwen35-independent-benchmark.jsonl
 python -m training.evaluate `
   --input training-data/qwen35-independent-benchmark.jsonl `
-  --model training-output/qwen3.5-0.8b-ner `
+  --model training-output/qwen3.5-2b-ner `
   --output test-artifacts/qwen35-independent-metrics.json
 ```
 
@@ -166,11 +171,11 @@ python -m training.evaluate `
 
 ```powershell
 python -m training.export_onnx `
-  --checkpoint training-output/qwen3.5-0.8b-ner `
-  --output-dir models/qwen3.5-0.8b-ner-onnx
+  --checkpoint training-output/qwen3.5-2b-ner `
+  --output-dir models/qwen3.5-2b-ner-onnx
 ```
 
-`models/qwen3.5-0.8b-ner-onnx/` 只需交付 `model.onnx`（若导出器生成 external-data
+`models/qwen3.5-2b-ner-onnx/` 只需交付 `model.onnx`（若导出器生成 external-data
 伴随文件也一并交付）、tokenizer、`label_mapping.json` 和运行配置。脱敏配置将
 `model.backend` 设为 `onnx`、`model.path` 指向该目录即可；Windows 自动优先尝试
 `DmlExecutionProvider`，不可用时回退 `CPUExecutionProvider`。运行时不加载 PyTorch、

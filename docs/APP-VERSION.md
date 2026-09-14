@@ -1,6 +1,6 @@
 # 版本与能力说明（APP-VERSION）
 
-> 版本：V0.5（2026-09-14）｜状态：生效
+> 版本：V0.6（2026-09-14）｜状态：生效
 > 本文档记录 Wenveil（文隐）的当前版本、已实现能力、验证结果和已知限制。
 > 阶段规划见 [ROADMAP.md](./ROADMAP.md)。
 
@@ -30,7 +30,7 @@
 | 加密映射与完整恢复 | 已实现 | AES-GCM、masked 哈希绑定、密码/篡改/Token 缺失校验 |
 | 审计与安全文件名 | 已实现 | audit 检查 PII、Token、表格结构；CLI 使用不可逆 `document-<safe-id>` |
 | 金融领域训练与外部数据适配 | 已实现 | 合成数据兼容流程、固定 train/dev/test/hard_test 适配、安全 schema 校验、标签校验和可选本地 Qwen 入口 |
-| Qwen3.5 Token Classification | 已实现（实验性） | 官方 `Qwen/Qwen3.5-0.8B` 本地下载、BIO 滑窗、best checkpoint、resume、独立 exact-span 评估；权重不入库 |
+| Qwen3.5 Token Classification | 已实现（实验性） | 默认官方 `Qwen/Qwen3.5-2B` 本地下载、BIO 滑窗、best checkpoint、resume、独立 exact-span 评估；权重不入库 |
 | ONNX Runtime NER 部署 | 已实现（实验性） | 固定长度 ONNX 导出、PyTorch/ORT parity、DirectML 优先/CPU 回退；运行时不导入 PyTorch |
 | Tauri + React 桌面 UI | 开发版已实现 | `desktop/` 覆盖文件选择、处理/恢复、进度、结果、设置和浏览器 HTTP 开发适配器；Python 业务仍由 Sidecar 调用 |
 
@@ -48,6 +48,7 @@
 ## 4. 已知限制
 
 - 当前默认离线规则链已经可用；Qwen3.5/ONNX 仍是实验性可选适配器，仓库不包含模型、checkpoint 或 external-data 权重。
+- 默认 2B 基座相比更小模型需要更多磁盘和运行内存；模型仍保持可选且默认不启用。
 - 外部训练数据必须通过 `--data-dir` 从仓库外只读接入；adapter 以 `text` 为 canonical text，关系只做结构校验，不进入 NER 标签。
 - 当前模型指标来自安全合成语料；独立 benchmark 已暴露未见实体/OCR 噪声下的误检和漏检，正式上线前必须补充授权真实语料并设残留率/误脱敏率门槛。
 - 白名单是精确词典制度；新增机构名称需要人工评审后修改规则文件，不使用模糊通配。
