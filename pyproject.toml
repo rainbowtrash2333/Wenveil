@@ -31,6 +31,18 @@ ocr-directml = [
 ocr-cuda = [
   "onnxruntime-gpu>=1.17.0",
 ]
+model = [
+  "torch>=2.4.0",
+  "transformers>=5.8.0",
+  "tokenizers>=0.21.0",
+  "numpy>=1.24.0",
+  "huggingface_hub>=0.30.0",
+  "onnx>=1.17.0",
+  "onnxruntime>=1.20.0",
+]
+model-directml = [
+  "onnxruntime-directml>=1.24.4",
+]
 
 [project.scripts]
 desense = "desensitize.cli:main"

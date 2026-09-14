@@ -15,7 +15,10 @@ class AddressRecognizer:
         "注册地址",
         "办公地址",
         "通信地址",
+        "送达地址",
+        "收件地址",
         "住所地",
+        "住址",
         "住所",
         "地址",
     )
@@ -36,14 +39,14 @@ class AddressRecognizer:
         # by the next clause instead of swallowing the rest of the paragraph.
         prose_labels = "|".join(
             re.escape(label)
-            for label in ("住所地/通信地址", "通讯地址", "联系地址", "注册地址", "办公地址", "通信地址", "住所地", "住所", "地址")
+            for label in ("住所地/通信地址", "通讯地址", "联系地址", "注册地址", "办公地址", "通信地址", "送达地址", "收件地址", "住所地", "住址", "住所", "地址")
         )
         self.prose_pattern = re.compile(
             rf"(?:{prose_labels})\s*为\s*(?P<prose>[^\n|；;，,。]+?)"
             rf"(?=\s*(?:已通过|法定代表人|负责人|登记机关|经营范围|联系人|联系电话|电话|邮箱|电子邮箱)|[；;，,。]|$)"
         )
         self.reverse_table_pattern = re.compile(
-            rf"(?:^|\|)\s*(?P<reverse>[^\n|]{{5,120}}?)\s*\|\s*(?:{labels})(?=\s*\||\s*$)",
+            rf"(?:^|\|)\s*(?P<reverse>[^\n|]{{5,120}}?)\s*\|\s*(?:{labels})\s*[:：]?\s*(?=\s*\||\s*$)",
             re.MULTILINE,
         )
         self.table_value_pattern = re.compile(
@@ -62,7 +65,7 @@ class AddressRecognizer:
             r"(?P<tail>[\u3400-\u9fffA-Za-z0-9·()（）\-]{2,40}(?:大厦|大楼|园区|基地|楼|层|室|栋|座)[^\n|]{0,20})(?=\s*\||\s*$)"
         )
         self.forward_table_pattern = re.compile(
-            rf"(?m)^(?P<prefix>[^\n]*?\|\s*(?:{labels})\s*\|)(?P<rest>[^\n]*)$"
+            rf"(?m)^(?P<prefix>[^\n]*?\|\s*(?:{labels})\s*[:：]?\s*\|)(?P<rest>[^\n]*)$"
         )
         self.priority = priority
         self.anonymize = anonymize

@@ -2,8 +2,8 @@
 name = "maintainer"
 description = "Remove confirmed dead code and redundancy in AICanRead while preserving security checks and synchronized docs."
 nickname_candidates = ["Maintainer", "Cleaner", "Keeper"]
-model = "gpt-5.6-sol"
-model_reasoning_effort = "high"
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
 
 developer_instructions = '''
 你负责 AICanRead 的死代码、重复逻辑、不可达分支和过期文档清理；只处理任务授权范围。

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import math
+from types import SimpleNamespace
 
 import pytest
 
 from desensitize.models import Span
 from desensitize.recognizers.model_ner import ModelNERRecognizer
+from desensitize.recognizers.onnx_ner import OnnxNERRecognizer
 
 
 class _FakeTensor:
@@ -209,6 +211,19 @@ def test_rows_to_spans_flushes_when_a_token_is_not_an_entity():
     ]
 
 
+@pytest.mark.parametrize("prefix", ["I", "L", "E"])
+def test_noninitial_window_leading_continuation_is_not_a_new_entity(prefix):
+    recognizer = ModelNERRecognizer()
+
+    spans = recognizer._rows_to_spans(
+        "甲乙",
+        [(0, 1, "PERSON", 0.9, prefix), (1, 2, "PERSON", 0.9, "I")],
+        allow_leading=False,
+    )
+
+    assert spans == []
+
+
 def test_recognize_deduplicates_exact_spans_across_chunks(monkeypatch):
     recognizer = ModelNERRecognizer({"enabled": True})
     chunks = [{"chunk": 1}, {"chunk": 2}]
@@ -240,3 +255,108 @@ def test_recognize_deduplicates_exact_spans_across_chunks(monkeypatch):
         (4, 6, "ORG", 0.91),
         (8, 10, "PROJECT", 0.89),
     ]
+
+
+def test_recognize_prefers_complete_same_type_span_from_overlapping_windows(monkeypatch):
+    recognizer = ModelNERRecognizer({"enabled": True})
+    chunks = [{"chunk": 1}, {"chunk": 2}]
+    predictions = {
+        1: [Span(4, 8, "ORG", "华电投资", score=0.70)],
+        2: [Span(4, 10, "ORG", "华电投资项目", score=0.60)],
+    }
+
+    monkeypatch.setattr(recognizer, "_ensure_loaded", lambda: None)
+    monkeypatch.setattr(recognizer, "_tokenize", lambda text: chunks)
+    monkeypatch.setattr(
+        recognizer,
+        "_predict_chunk",
+        lambda text, chunk: predictions[chunk["chunk"]],
+    )
+
+    spans = recognizer.recognize("甲乙丙丁华电投资项目名称")
+
+    assert [(span.start, span.end, span.entity_type) for span in spans] == [
+        (4, 10, "ORG"),
+    ]
+
+
+def test_transformers_flat_tokenizer_output_is_normalized_to_one_window():
+    recognizer = ModelNERRecognizer()
+    recognizer._tokenizer = lambda text, **kwargs: {
+        "input_ids": [1, 2, 3],
+        "attention_mask": [1, 1, 1],
+        "token_type_ids": [0, 0, 0],
+        "position_ids": [0, 1, 2],
+        "offset_mapping": [(0, 0), (0, 1), (1, 2)],
+    }
+
+    chunks = recognizer._tokenize("甲乙")
+
+    assert len(chunks) == 1
+    assert chunks[0]["input_ids"] == [1, 2, 3]
+    assert chunks[0]["attention_mask"] == [1, 1, 1]
+    assert chunks[0]["token_type_ids"] == [0, 0, 0]
+    assert chunks[0]["position_ids"] == [0, 1, 2]
+    assert chunks[0]["offset_mapping"] == [(0, 0), (0, 1), (1, 2)]
+    assert chunks[0]["is_document_end"] is True
+
+
+def test_onnx_window_metadata_controls_trailing_bio_flush(monkeypatch):
+    np = pytest.importorskip("numpy")
+
+    class FakeTokenizer:
+        def __init__(self):
+            self.overflowing = []
+
+        def encode(self, text, is_pretokenized=True):
+            first = SimpleNamespace(
+                ids=[1, 2],
+                attention_mask=[1, 1],
+                word_ids=[0, 1],
+                offsets=[(0, 1), (0, 1)],
+                overflowing=[SimpleNamespace(
+                    ids=[1, 2],
+                    attention_mask=[1, 1],
+                    word_ids=[1, 2],
+                    offsets=[(0, 1), (0, 1)],
+                )],
+            )
+            return first
+
+        def no_padding(self):
+            pass
+
+        def enable_truncation(self, **kwargs):
+            pass
+
+    recognizer = OnnxNERRecognizer()
+    recognizer._tokenizer = FakeTokenizer()
+    chunks = recognizer._tokenize("甲乙丙")
+    assert [chunk["window_start"] for chunk in chunks] == [0, 1]
+    assert [chunk["is_document_end"] for chunk in chunks] == [False, True]
+
+    class FakeInput:
+        def __init__(self, name):
+            self.name = name
+
+    class FakeSession:
+        def get_inputs(self):
+            return [FakeInput("input_ids"), FakeInput("attention_mask")]
+
+        def run(self, outputs, inputs):
+            return [np.asarray([[[8.0], [8.0]]])]
+
+    seen = []
+    recognizer._np = np
+    recognizer._session = FakeSession()
+    recognizer._id2label = {0: "B-PER"}
+    monkeypatch.setattr(
+        recognizer,
+        "_rows_to_spans",
+        lambda text, rows, *, allow_leading=True, flush_trailing=True: seen.append(
+            (allow_leading, flush_trailing)
+        ) or [],
+    )
+    recognizer._predict_chunk("甲乙丙", chunks[0])
+    recognizer._predict_chunk("甲乙丙", chunks[1])
+    assert seen == [(True, False), (False, True)]

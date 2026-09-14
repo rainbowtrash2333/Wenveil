@@ -20,6 +20,7 @@ from .recognizers import (
     EmailRecognizer,
     IdCardRecognizer,
     ModelNERRecognizer,
+    OnnxNERRecognizer,
     NumberRecognizer,
     OrganizationRecognizer,
     PersonRecognizer,
@@ -182,8 +183,10 @@ class Desensitizer:
         recognizers.extend(build_custom_recognizers(self.config.custom))
         if self.config.model.get("enabled", False):
             base_dir = self.config.source_path.parent if self.config.source_path else Path.cwd()
+            model_backend = str(self.config.model.get("backend", "transformers")).lower()
+            recognizer_type = OnnxNERRecognizer if model_backend == "onnx" else ModelNERRecognizer
             recognizers.append(
-                ModelNERRecognizer(
+                recognizer_type(
                     self.config.model,
                     base_dir=base_dir,
                     entity_options=self.config.entities,

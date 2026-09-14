@@ -132,6 +132,8 @@ class LocalOcrEngine:
             "Global.text_score": self._config.text_score,
             "Det.box_thresh": self._config.box_score,
         }
+        if self._config.model_dir:
+            params["Global.model_root_dir"] = self._config.model_dir
 
         # 设备选择：DirectML > CUDA > CPU
         if self._config.use_dml:

@@ -132,6 +132,7 @@ class DocumentConverter:
                 lang=self.config.ocr.lang,
                 use_dml=self.config.ocr.use_dml,
                 use_gpu=self.config.ocr.use_gpu,
+                model_dir=self.config.ocr.model_dir,
                 image_scale=self.config.ocr.image_scale,
             )
             logger.info(

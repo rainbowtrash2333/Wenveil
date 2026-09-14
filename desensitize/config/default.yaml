@@ -39,7 +39,7 @@ entities:
     detect: true
     anonymize: true
     protect_when_disabled: true
-    priority: 75
+    priority: 100
   PHONE:
     detect: true
     anonymize: true
@@ -91,11 +91,14 @@ custom: []
 
 model:
   enabled: false
-  backend: transformers
-  path: ../models/qwen3-1.7b-pii
+  backend: onnx
+  path: ../../models/qwen3.5-0.8b-ner-onnx
   local_files_only: true
   chunk_size: 1024
   overlap: 128
+  onnx_file: model.onnx
+  label_mapping: label_mapping.json
+  execution_provider: auto
   thresholds:
     PERSON: 0.90
     ORG: 0.92

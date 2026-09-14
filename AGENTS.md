@@ -7,9 +7,9 @@
 
 **Wenveil（文隐）** 是面向中文 OCR 金融、保险与投资文档的离线文档处理工具，包含三个可独立调用的
 功能模块：`ocr/` 负责文档/图片转 Markdown，`organize/` 负责 OCR 文本确定性整理，
-`desensitize/` 负责可逆脱敏。脱敏系统以多路 Span 识别、统一冲突解析、短语义 Token 和
-AES-GCM 加密映射为核心；模型只能提出候选实体，不能改写原文。任何日志、报告和提交都不得泄露
-用户原始文档或映射密码。
+`desensitize/` 负责可逆脱敏；`desktop/` 提供 Tauri + React 桌面端入口。脱敏系统以多路 Span
+识别、统一冲突解析、短语义 Token 和 AES-GCM 加密映射为核心；模型只能提出候选实体，不能改写原文。
+任何日志、报告和提交都不得泄露用户原始文档或映射密码。
 
 ## 2. 开工前必读（重要）
 
@@ -38,6 +38,7 @@ AES-GCM 加密映射为核心；模型只能提出候选实体，不能改写原
 | 运行时 | 标准库 + PyYAML + cryptography；可选 Transformers/PyTorch |
 | 构建/安装 | setuptools / `pyproject.toml` / `python -m pip install -e .` |
 | 测试 | pytest |
+| 桌面端 | Tauri 2 + React + TypeScript + Vite；Python Sidecar 使用 JSON Lines |
 
 ## 4. 目录约定
 
@@ -51,6 +52,7 @@ Wenveil/
 ├── ocr/             # 独立 OCR/文档转换模块：Docling + RapidOCR + CLI
 ├── organize/        # 独立 OCR 文本整理模块：Markdown/纯文本规整 + CLI
 ├── desensitize/     # 独立可逆脱敏模块：识别、解析、替换、恢复、审计、CLI
+├── desktop/         # Tauri 2 + React 桌面端 UI 与 Python Sidecar 适配
 ├── training/        # 离线训练数据、增强、验证与可选 Qwen 训练脚手架
 ├── config/          # 项目默认配置（含 config/ocr.yaml）
 ├── rules/           # 公共词典、机构关系注册表和公共机构白名单（项目词典为空模板）
@@ -71,7 +73,7 @@ Wenveil/
 - Python 遵循 PEP 8；模块、函数和变量使用 `snake_case`，类使用 `PascalCase`，类型提示覆盖公开接口。
 - 注释解释约束和原因，不复述代码；日志和异常不得包含敏感 surface 或原始上下文。
 - **分层依赖**：严格遵守 [docs/MODULES.md](docs/MODULES.md) 的依赖规则；禁止反向依赖，跨层经接口。
-- **测试（强制）**：所有新增业务逻辑必须有单元测试；核心用户流程用 CLI 集成冒烟或集成测试验证。本项目没有 GUI，不伪造页面端到端测试。
+- **测试（强制）**：所有新增业务逻辑必须有单元测试；核心用户流程用 CLI 集成冒烟或集成测试验证。桌面 UI 的浏览器开发适配器用 Playwright 验收，Tauri 原生桥接用 Cargo 检查；不把浏览器验收当作原生打包验收。
 - **中间产物**：截图、日志、崩溃堆栈、审计记录一律放 `test-artifacts/`，严禁提交（见 [docs/DEVELOPMENT-GUIDELINES.md](docs/DEVELOPMENT-GUIDELINES.md)）。
 
 ## 6. 构建与测试命令
@@ -88,6 +90,15 @@ pytest -q
 python -m ocr --help
 python -m organize --help
 python -m desensitize --help
+```
+
+桌面端开发与验收：
+
+```powershell
+cd desktop
+npm install
+npm run typecheck
+npm run build
 ```
 
 ## 7. AI 助手工作约定

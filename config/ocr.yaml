@@ -33,6 +33,7 @@ ocr:
   use_dml: true              # AMD/Intel DirectML GPU 加速（与 use_gpu 互斥）
   text_score: 0.5             # 文本识别置信度阈值
   box_score: 0.3              # 文本检测置信度阈值
+  model_dir: null              # 发布目录中的本地 RapidOCR 模型目录
   max_image_size: 3508         # 图片最大边长（像素），超过则等比压缩以节省内存，默认为A4 300ppi
   image_scale: 1.0             # PDF OCR 页面图像放大倍率（1.0 为均衡值；精度不足可升 1.5~2.0，但耗时按面积增长）
 

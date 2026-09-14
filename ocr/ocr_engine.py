@@ -44,6 +44,7 @@ class RapidOcrOptions(OcrOptions):
     lang: List[str] = ["ch"]
     use_dml: bool = False
     use_gpu: bool = False
+    model_dir: Optional[str] = None
     image_scale: float = 2.0   # OCR 前页面图像放大倍率（越大精度越高、耗时越长）
 
 
@@ -96,6 +97,7 @@ class RapidOcrModel(BaseOcrModel):
                 use_angle_cls=True,
                 use_dml=options.use_dml,
                 use_gpu=options.use_gpu,
+                model_dir=options.model_dir,
             )
             self.ocr_engine = LocalOcrEngine(ocr_config)
             _log.info("RapidOCR 本地引擎已初始化（语言: %s）", options.lang)

@@ -6,6 +6,7 @@ from .date import DateRecognizer
 from .dictionary import DictionaryRecognizer
 from .email import EmailRecognizer
 from .model_ner import ModelNERRecognizer
+from .onnx_ner import OnnxNERRecognizer
 from .organization import OrganizationRecognizer
 from .person import PersonRecognizer
 from .phone import PhoneRecognizer
@@ -21,6 +22,7 @@ __all__ = [
     "EmailRecognizer",
     "IdCardRecognizer",
     "ModelNERRecognizer",
+    "OnnxNERRecognizer",
     "NumberRecognizer",
     "OrganizationRecognizer",
     "PersonRecognizer",

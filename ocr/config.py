@@ -44,6 +44,7 @@ class OcrConfig:
                  与 use_gpu 互斥，use_dml 优先。
         text_score: 文本识别置信度阈值，低于此值的结果将被丢弃。
         box_score: 文本检测置信度阈值。
+        model_dir: RapidOCR 本地模型目录。为空时使用 RapidOCR 默认模型目录。
     """
     enabled: bool = True
     lang: List[str] = field(default_factory=lambda: ["ch"])
@@ -52,6 +53,7 @@ class OcrConfig:
     use_dml: bool = False
     text_score: float = 0.5
     box_score: float = 0.3
+    model_dir: Optional[str] = None
     max_image_size: int = 3072
     image_scale: float = 1.0   # PDF OCR 前页面图像放大倍率：越大精度越高、耗时越长（默认1.0均衡）
 

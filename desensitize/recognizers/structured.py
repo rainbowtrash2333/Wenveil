@@ -10,6 +10,11 @@ class IdCardRecognizer:
     _pattern = re.compile(
         r"(?<!\d)(?:[1-9]\d{5}(?:18|19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}[\dXx])(?!\d)"
     )
+    _context = re.compile(
+        r"(?:身份证(?:号码|号)?|证件(?:号码|号)?)\s*[:：]?\s*[【\[]?"
+        r"(?P<value>(?:[0-9Xx][ \t\-－—]?){14,17}[0-9Xx])"
+        r"[】\]]?"
+    )
     _weights = (7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2)
     _checks = "10X98765432"
 
@@ -38,6 +43,25 @@ class IdCardRecognizer:
                         protect=self.protect,
                     )
                 )
+        existing = {(span.start, span.end) for span in spans}
+        for match in self._context.finditer(text):
+            start, end = match.span("value")
+            if (start, end) in existing:
+                continue
+            spans.append(
+                Span(
+                    start,
+                    end,
+                    "ID_CARD",
+                    text[start:end],
+                    score=0.99,
+                    priority=self.priority,
+                    source="id_card_rule",
+                    rule_id="id_card_context",
+                    anonymize=self.anonymize,
+                    protect=self.protect,
+                )
+            )
         if self.allow_15:
             pattern = re.compile(r"(?<!\d)[1-9]\d{7}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}(?!\d)")
             for match in pattern.finditer(text):

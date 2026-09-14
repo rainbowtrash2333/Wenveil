@@ -1,4 +1,4 @@
-"""BIO/BILOU labels, span conversion, and lossless teacher-output checks."""
+"""BIO/BIOES/BILOU labels, span conversion, and lossless teacher checks."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Literal
 
 from .types import EntityAnnotation
 
-LabelScheme = Literal["BIO", "BILOU"]
+LabelScheme = Literal["BIO", "BIOES", "BILOU"]
 
 
 class LabelValidationError(ValueError):
@@ -37,15 +37,32 @@ class TaggedTextResult:
     spans: tuple[EntityAnnotation, ...]
 
 
-_LABEL_RE = re.compile(r"^(?P<prefix>O|B|I|L|U)(?:-(?P<entity>[A-Za-z][A-Za-z0-9_.:-]*))?$")
+_ENTITY_TYPE_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_.:-]*$")
+_LABEL_RE = re.compile(
+    r"^(?P<prefix>O|B|I|L|U|E|S)(?:-(?P<entity>[A-Za-z][A-Za-z0-9_.:-]*))?$"
+)
 _TAG_RE = re.compile(r"</?(?P<entity>[A-Za-z][A-Za-z0-9_.:-]*)\s*>")
 
 
 def normalize_scheme(scheme: str) -> str:
     normalized = str(scheme).upper().replace("-", "")
-    if normalized in {"BIO", "BILOU", "BIOUL"}:
-        return "BILOU" if normalized in {"BILOU", "BIOUL"} else "BIO"
-    raise ValueError("scheme must be BIO or BILOU")
+    if normalized in {"BIO", "BIOES", "BILOU", "BIOUL"}:
+        if normalized in {"BILOU", "BIOUL"}:
+            return "BILOU"
+        return normalized
+    raise ValueError("scheme must be BIO, BIOES, or BILOU")
+
+
+def validate_entity_type(entity_type: str) -> str:
+    """Validate an entity type accepted by all token-label schemes.
+
+    Entity types are part of generated labels, so this deliberately shares the
+    same ASCII grammar as the entity component of :func:`parse_label`.
+    """
+
+    if not isinstance(entity_type, str) or not _ENTITY_TYPE_RE.fullmatch(entity_type):
+        raise LabelValidationError("entity_type is not a valid label component")
+    return entity_type
 
 
 def parse_label(label: str) -> tuple[str, str | None]:
@@ -62,6 +79,7 @@ def parse_label(label: str) -> tuple[str, str | None]:
         return prefix, None
     if entity is None:
         raise LabelValidationError(f"{prefix} must carry an entity type")
+    validate_entity_type(entity)
     return prefix, entity
 
 
@@ -147,7 +165,7 @@ def _spans_from_parsed_labels(
         if prefix == "O":
             if open_start is not None and scheme == "BIO":
                 close(index)
-            elif scheme == "BILOU" and open_start is not None:
+            elif scheme in {"BIOES", "BILOU"} and open_start is not None:
                 raise LabelValidationError(f"open entity is not closed before unit {index}")
             continue
 
@@ -163,6 +181,28 @@ def _spans_from_parsed_labels(
                 raise LabelValidationError(f"{prefix} is not valid in BIO")
             if index == len(parsed) - 1 and open_start is not None:
                 close(len(parsed))
+            continue
+
+        if scheme == "BIOES":
+            # BIOES is strict: every B/I run must terminate with E; S is one unit.
+            if prefix == "S":
+                if open_start is not None:
+                    raise LabelValidationError(f"S label at unit {index} interrupts an entity")
+                start, end = offsets[index]
+                spans.append(EntityAnnotation(start, end, entity_type or "", text[start:end]))
+            elif prefix == "B":
+                if open_start is not None:
+                    raise LabelValidationError(f"B label at unit {index} interrupts an entity")
+                open_start, open_type = index, entity_type
+            elif prefix == "I":
+                if open_start is None or entity_type != open_type:
+                    raise LabelValidationError(f"I label at unit {index} has no matching B label")
+            elif prefix == "E":
+                if open_start is None or entity_type != open_type:
+                    raise LabelValidationError(f"E label at unit {index} has no matching B label")
+                close(index + 1)
+            else:
+                raise LabelValidationError(f"{prefix} is not valid in BIOES")
             continue
 
         # BILOU is strict: every B/I run must terminate with L; U is one unit.
@@ -186,7 +226,10 @@ def _spans_from_parsed_labels(
             raise LabelValidationError(f"unsupported label prefix {prefix!r}")
 
     if open_start is not None:
-        raise LabelValidationError("entity started with B but has no terminating L")
+        terminator = "E" if scheme == "BIOES" else "L"
+        raise LabelValidationError(
+            f"entity started with B but has no terminating {terminator}"
+        )
     return tuple(sorted(spans, key=lambda span: (span.start, span.end)))
 
 
@@ -253,13 +296,23 @@ def validate_bilou_labels(
     return validate_label_sequence(labels, scheme="BILOU", text=text, units=units, offsets=offsets)
 
 
+def validate_bioes_labels(
+    labels: Sequence[str],
+    *,
+    text: str | None = None,
+    units: Sequence[str] | None = None,
+    offsets: Sequence[tuple[int, int]] | None = None,
+) -> LabelValidationResult:
+    return validate_label_sequence(labels, scheme="BIOES", text=text, units=units, offsets=offsets)
+
+
 def spans_to_labels(
     text: str,
     spans: Iterable[EntityAnnotation | object],
     *,
     scheme: str = "BIO",
 ) -> list[str]:
-    """Create character-aligned BIO/BILOU labels from non-overlapping spans."""
+    """Create character-aligned BIO/BIOES/BILOU labels from non-overlapping spans."""
 
     normalized_scheme = normalize_scheme(scheme)
     annotations = [EntityAnnotation.from_value(span, text) for span in spans]
@@ -279,6 +332,14 @@ def spans_to_labels(
             labels[annotation.start] = f"B-{annotation.entity_type}"
             for index in range(annotation.start + 1, annotation.end):
                 labels[index] = f"I-{annotation.entity_type}"
+        elif normalized_scheme == "BIOES":
+            if length == 1:
+                labels[annotation.start] = f"S-{annotation.entity_type}"
+            else:
+                labels[annotation.start] = f"B-{annotation.entity_type}"
+                for index in range(annotation.start + 1, annotation.end - 1):
+                    labels[index] = f"I-{annotation.entity_type}"
+                labels[annotation.end - 1] = f"E-{annotation.entity_type}"
         elif length == 1:
             labels[annotation.start] = f"U-{annotation.entity_type}"
         else:

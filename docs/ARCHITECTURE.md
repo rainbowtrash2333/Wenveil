@@ -1,6 +1,6 @@
 # 总体架构（ARCHITECTURE）
 
-> 版本：V0.3（2026-09-12）｜状态：生效
+> 版本：V0.4（2026-09-14）｜状态：生效
 > 本文档描述 Wenveil（文隐）的分层、核心概念、数据流与目录结构；模块职责与依赖
 > 规则见 [MODULES.md](./MODULES.md)。
 
@@ -8,15 +8,17 @@
 
 1. `restore(mask(normalize(source))) == normalize(source)` 必须成立，模型不能改写文本。
 2. 所有识别器只返回不可变的 `Span`；重叠、优先级和保护策略统一由 Resolver 决定。
-3. 规则处理确定性字段，词典/注册表/可选本地 NER 处理语义实体；无模型时仍可离线运行。
+3. 规则处理确定性字段，词典/注册表/可选本地 NER 处理语义实体；无模型时仍可离线运行。模型运行时可选 PyTorch Transformers 或不依赖 PyTorch 的 ONNX Runtime。
 4. mapping 必须加密并绑定 masked 哈希；报告、日志和文件名不得泄露原始敏感值。
 5. 公共机构白名单是受保护 Span；白名单子串不能放行更长的非白名单机构。
 6. OCR、文本整理、脱敏分别提供独立 CLI；模块之间只通过文件/文本契约组合，不互相调用业务逻辑。
+7. 桌面端只负责文件选择、用户设置、进度和结果展示，通过 JSON Lines Sidecar 调用既有 Python 模块，不复制识别或替换逻辑。
 
 ## 2. 分层结构
 
 ```text
 ┌─────────────────────────────────────────────────────┐
+│ 桌面接入层  desktop/ React + Tauri                  │
 │ 独立接入层  ocr/cli.py | organize/cli.py            │
 │             desensitize/cli.py                      │
 ├─────────────────────────────────────────────────────┤
@@ -29,8 +31,9 @@
 └─────────────────────────────────────────────────────┘
 ```
 
-依赖方向：`ocr/cli → ocr/pipeline`、`organize/cli → organize/core`、
-`desensitize/cli → desensitize/pipeline`；三个功能模块均可依赖 `common/`，但不得互相导入业务实现。
+依赖方向：`desktop/bridge → Python module APIs`、`ocr/cli → ocr/pipeline`、
+`organize/cli → organize/core`、`desensitize/cli → desensitize/pipeline`；三个功能模块均可依赖
+`common/`，但不得互相导入业务实现。桌面端不包含实体识别规则，Python Sidecar 只输出安全状态、计数、行号和安全文件名。
 `training/` 可以复用 `desensitize.models.Span` 等稳定数据结构；生产包不得反向导入 `training/`、
 `tests/`、`test-artifacts/` 或用户资料目录。
 
@@ -40,6 +43,7 @@
 |------|------|----------|
 | `Span` | 规整文本上的不可变实体候选 | `desensitize/models.py` |
 | Recognizer | 只读识别并返回候选 Span | `desensitize/recognizers/` |
+| Model recognizer | 本地 Qwen3.5 token logits 解码为候选 Span；不改写原文 | `desensitize/recognizers/model_ner.py`、`onnx_ner.py` |
 | Resolver | 按优先级、置信度和长度选择不重叠 Span | `desensitize/resolver.py` |
 | Whitelist | 保留公开机构名称的受保护 ORG Span | `rules/organization_whitelist.txt` |
 | MappingVault | 加密保存 Token 与原值，绑定哈希 | `desensitize/mapping.py` |
@@ -51,7 +55,10 @@
 OCR documents/images → ocr/ → Markdown → organize/ → stable text
                                            │
                                            ▼
+Tauri/React → JSON Lines Sidecar → OCR/Organize/Desensitize
+             ↓
 Markdown/OCR → Normalizer → Recognizers → Candidate Span[]
+             (rules + optional local Qwen3.5 / ONNX Runtime)
              → whitelist nesting filter → Resolver → Accepted Span[]
              → one-pass compact Token replacement → masked.md + mapping.enc + report.json
 
@@ -67,6 +74,7 @@ Wenveil/
 ├── common/              # 共享确定性文本规整与安全 ID
 ├── ocr/                 # Docling + RapidOCR 文档转换
 ├── organize/            # OCR Markdown/纯文本整理
+├── desktop/            # Tauri + React UI 与 Python Sidecar 适配
 ├── test-artifacts/     # 中间产物（不入库）
 ├── desensitize/        # 生产包
 ├── training/           # 离线训练脚手架
@@ -79,4 +87,6 @@ Wenveil/
 
 - [ADR-0001：混合式确定性可逆脱敏架构](./adr/0001-hybrid-reversible-desensitization.md)
 - [ADR-0002：OCR、文本整理与脱敏模块独立化](./adr/0002-independent-processing-modules.md)
+- [ADR-0003：Tauri 桌面端与 Python Sidecar](./adr/0003-tauri-desktop-ui.md)
+- [ADR-0004：Qwen3.5 Token Classification 与 ONNX 离线部署](./adr/0004-qwen35-token-classification-onnx.md)
 - 详细演进方案见 [OCR 脱敏实施方案](./ocr_desensitization_implementation_plan.md)。

@@ -55,6 +55,20 @@ python -m organize .\test-artifacts\ocr-outputs\document-<safe-id>.ocr.md
 
 默认整理输出到 `test-artifacts/organized-outputs/`，可用 `-o` 指定文件或目录。
 
+### 桌面端开发版
+
+桌面端位于 [`desktop/`](desktop/)，使用 Tauri + React 调用 Python Sidecar；它覆盖文件选择、处理、可逆恢复、进度、结果和设置。
+
+```powershell
+npm --prefix desktop install
+npm --prefix desktop run typecheck
+npm --prefix desktop run build
+cargo check --manifest-path desktop/src-tauri/Cargo.toml
+```
+
+需要浏览器验收时，先启动 `python desktop/bridge/http_dev_server.py`，再运行
+`npm --prefix desktop run dev:http -- --host 127.0.0.1 --port 5173`。HTTP 适配器只用于本机开发，Python Sidecar 的离线打包尚未开启。
+
 也可以通过环境变量提供密码：
 
 ```powershell
@@ -86,13 +100,19 @@ python -m desensitize audit test-artifacts/desensitization-outputs/document-<saf
 
 ## Qwen 小模型
 
-`model.enabled` 默认关闭。将本地 Qwen Token Classification checkpoint 放到配置的 `model.path` 后开启即可；模型只输出实体 Span，最终替换仍由规则引擎和加密映射完成。
+`model.enabled` 默认关闭。推荐将本地 Qwen3.5 Token Classification checkpoint 导出为
+ONNX 部署目录，并把 `model.backend` 设为 `onnx`、`model.path` 指向该目录后开启；Windows
+运行时优先尝试 DirectML，不可用时回退 CPU，且不导入 PyTorch。模型只输出候选实体 Span，
+最终替换仍由规则引擎、白名单、Resolver 和加密 mapping 完成。完整下载、训练、独立评估和
+导出命令见 [`training/README.md`](training/README.md)。
 
 机构简称/别名采用两阶段逻辑：第一阶段由规则、词典和可选 NER 模型找出全称、简称、子公司/分公司候选；第二阶段只对候选提及、局部上下文和注册表 Top-K 候选做实体链接。两阶段可以共享同一个 Qwen 主干和适配器，不需要再训练一个完整模型。当前占位符使用短语义格式：`⟦人员1⟧`、`⟦机构1⟧`、`⟦机构1-别名1⟧`、`⟦机构1-子公司1⟧`；真实全称、别名和关系只写入加密 mapping。若简称在同一文档中无法唯一链接，仍使用普通机构 Token 脱敏，不因歧义保留原简称，也不写入错误的主体关系。
 
 名单、联系人、董事会成员和部门名册中已经确认的短姓名，在同一文档的重复无标签提及时会精确复用同一人员 Token；该传播只接受名单类高置信来源且要求原文至少出现两次，以降低职务词误判。
 
-无模型权重时，可先使用 `training/README.md` 中的规则弱标注、BIO/BILOU 校验、OCR 增强、文档级切分和本地训练入口准备数据。该训练目录不会在导入时加载 PyTorch 或 Transformers。
+无模型权重时，可先使用 `training/README.md` 中的规则弱标注、BIO/BIOES/BILOU 校验、OCR 增强、文档级切分和本地训练入口准备数据。该训练目录不会在导入时加载 PyTorch 或 Transformers。
+
+授权外部 NER 数据通过训练入口的 `--data-dir` 只读接入（默认相对目录 `data`），不复制到仓库或重新随机切分。适配器以外部记录的 `text` 为 canonical text；`clean_text`、实体/关系 ID、子类型和 relations 不进入 NER 标签。固定 `train/dev` 分别承担训练与 Trainer validation/best checkpoint，`test/hard_test` 仅由训练后的独立 exact-span 评估读取。旧的 `--input`、`--train`、`--validation`、`--prepare-dir` 合成流程继续兼容，详见 [`training/README.md`](training/README.md)。
 
 ## 配置
 

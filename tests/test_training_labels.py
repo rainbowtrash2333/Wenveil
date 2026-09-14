@@ -5,6 +5,7 @@ from training.labels import (
     LabelValidationError,
     parse_tagged_text,
     spans_to_labels,
+    validate_bioes_labels,
     validate_bilou_labels,
     validate_bio_labels,
 )
@@ -19,12 +20,27 @@ def test_rule_span_metadata_can_generate_lossless_bio_and_bilou_labels():
     ]
 
     bio = spans_to_labels(text, spans, scheme="BIO")
+    bioes = spans_to_labels(text, spans, scheme="BIOES")
     bilou = spans_to_labels(text, spans, scheme="BILOU")
 
     assert validate_bio_labels(bio, text=text).text == text
+    assert validate_bioes_labels(bioes, text=text).text == text
     assert validate_bilou_labels(bilou, text=text).text == text
     sample = sample_from_spans(text, spans, document_id="doc-1", scheme="BILOU")
     assert [span.entity_type for span in sample.spans] == ["PERSON", "ORG"]
+
+
+def test_bioes_requires_end_marker_and_supports_singletons():
+    result = validate_bioes_labels(
+        ["S-PERSON", "B-ORG", "I-ORG", "E-ORG", "O"],
+        text="张公司甲乙",
+    )
+    assert [(span.start, span.end, span.entity_type) for span in result.spans] == [
+        (0, 1, "PERSON"),
+        (1, 4, "ORG"),
+    ]
+    with pytest.raises(LabelValidationError):
+        validate_bioes_labels(["B-ORG", "I-ORG", "O"], text="公司甲")
 
 
 def test_bio_entity_must_not_resume_after_o():

@@ -1,0 +1,37 @@
+{
+  "name": "wenveil-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:demo": "vite --mode demo",
+    "dev:http": "vite --mode http",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "build:sidecar": "python bridge/build_sidecar.py",
+    "tauri:build:models": "python bridge/build_release.py",
+    "tauri:build": "npm run tauri:build:models",
+    "tauri:build:dir": "npm run build:sidecar && tauri build --no-bundle && python bridge/package_directory.py",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run typecheck"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "latest",
+    "@tauri-apps/plugin-dialog": "latest",
+    "@vitejs/plugin-react": "latest",
+    "vite": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "typescript": "latest"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

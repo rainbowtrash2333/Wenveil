@@ -111,18 +111,3 @@ def write_jsonl(
             handle.write("\n")
             count += 1
     return count
-
-
-def validate_jsonl(path: str | Path, *, scheme: str = "BIO") -> dict[str, Any]:
-    samples = read_jsonl(path, scheme=scheme)
-    entity_counts: dict[str, int] = {}
-    for sample in samples:
-        for span in sample.spans:
-            entity_counts[span.entity_type] = entity_counts.get(span.entity_type, 0) + 1
-    return {
-        "samples": len(samples),
-        "documents": len({sample.document_id for sample in samples}),
-        "characters": sum(len(sample.text) for sample in samples),
-        "entities": dict(sorted(entity_counts.items())),
-        "scheme": scheme.upper(),
-    }

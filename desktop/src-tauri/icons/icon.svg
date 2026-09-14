@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <rect width="256" height="256" rx="48" fill="#202a27"/>
+  <path d="M58 72h92l48 48v76H58z" fill="#f4f4f0"/>
+  <path d="M150 72v48h48" fill="none" stroke="#202a27" stroke-width="10"/>
+  <text x="128" y="174" text-anchor="middle" font-family="serif" font-size="82" font-weight="900" fill="#176a57">文</text>
+</svg>

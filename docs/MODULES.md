@@ -1,6 +1,6 @@
 # 模块边界（MODULES）
 
-> 版本：V0.3（2026-09-12）｜状态：生效
+> 版本：V0.4（2026-09-14）｜状态：生效
 > 本文档定义 Wenveil（文隐）的模块职责、边界与依赖规则；分层总览见
 > [ARCHITECTURE.md](./ARCHITECTURE.md)。
 
@@ -14,11 +14,12 @@
 | Desensitize CLI | 参数解析、安全文件名、mask/restore/inspect/audit/benchmark | `desensitize/cli.py` |
 | Pipeline | 编排规整、识别、白名单嵌套过滤、解析、替换和报告 | `desensitize/pipeline.py` |
 | Normalizer | Unicode、OCR 空格、断行及结构字段规整 | `common/text_normalizer.py`、`desensitize/normalizer/` |
-| Recognizers | 规则、词典、机构关系和可选模型候选识别 | `desensitize/recognizers/` |
+| Recognizers | 规则、词典、机构关系，以及 Qwen3.5 Transformers/ONNX Runtime 候选识别 | `desensitize/recognizers/` |
 | Resolver | 确定性冲突消解与保护 Span 选择 | `desensitize/resolver.py` |
 | Mapping | compact Token、AES-GCM 映射、哈希校验和恢复 | `desensitize/mapping.py` |
 | Config/Rules | YAML 配置、实体词典、关系注册表、公共机构白名单 | `config/`、`rules/` |
 | Audit | masked 文档残留与 Markdown 结构只读审计 | `desensitize/audit.py` |
+| Desktop UI/Sidecar | 文件选择、处理步骤、进度、结果、恢复和设置；JSON Lines 桥接到既有 Python 模块 | `desktop/` |
 | Training | 合成数据、标签校验、OCR 增强、评估和可选模型训练 | `training/` |
 | Tests | 单元与集成回归 | `tests/` |
 
@@ -32,13 +33,17 @@
 - Resolver 不读取配置文件或 mapping，只对 Span 进行确定性选择。
 - Mapping 不重新识别实体；恢复必须先校验密文和 masked/normalized 哈希。
 - Training 不进入生产运行链路，生产包不得依赖可选训练框架。
+- ONNX recognizer 只依赖 `tokenizers`、`numpy` 和 ONNX Runtime；不导入 PyTorch、训练代码或 checkpoint optimizer 状态。
 - Audit 不回显命中的敏感文本，只输出类别、行号和固定摘要。
+- Desktop UI/Sidecar 不实现实体识别、冲突解析或映射恢复规则；前端只传递文件、设置和密码，并展示安全结果。浏览器 HTTP 适配器仅监听 loopback，Tauri 负责桌面窗口和 Sidecar 生命周期。
 
 ## 3. 依赖规则（强制）
 
 - `ocr/cli → ocr/pipeline`、`organize/cli → organize/core`、`desensitize/cli → desensitize/pipeline`；禁止跨功能模块反向依赖。
+- `desktop/bridge →` 各 Python 模块的公开编排接口；桌面端不得反向修改或复制 OCR、Organize、Desensitize 业务实现。
 - 三个功能模块可依赖 `common/`；禁止 `ocr/`、`organize/` 依赖 `desensitize/pipeline`。
 - `Recognizers → models.Span`；Recognizer 之间不得互相改写结果，通过 Pipeline 汇合。
+- `OnnxNERRecognizer → tokenizers/onnxruntime`；模型输出仍必须经过 whitelist filter、Resolver、Mapping 和 Audit。
 - `training → desensitize.models` 可接受；`desensitize → training` 禁止。
 - 生产代码不得读取 `test-artifacts/desensitization-inputs/`、`test-artifacts/desensitization-outputs/` 或原始用户资料作为隐式配置。
 - 白名单、机构关系和词典必须来自配置/规则文件，不得散落硬编码在业务流程。
@@ -51,6 +56,7 @@
 - Recognizers/Resolver：边界、优先级、白名单、别名与重叠实体。
 - Mapping：加密、篡改、密码错误、Token 碰撞、完全恢复。
 - Audit：PII 形态、Token 完整性和 Markdown 表格结构。
+- Desktop：JSON Lines 请求校验、文件/目录输入、步骤组合、进度与恢复流程；浏览器开发模式用 Playwright 验收，Tauri 用 Cargo 检查原生桥接。
 - Training：标签无损、文档级切分、增强一致性、可选依赖延迟加载。
 
 ## 5. 构建与测试

@@ -2,7 +2,7 @@
 name = "coder"
 description = "Implement scoped AICanRead code changes with tests while preserving reversible-desensitization safety."
 nickname_candidates = ["Coder", "Dev"]
-model = "gpt-5.6-sol"
+model = "gpt-5.6-luna"
 model_reasoning_effort = "high"
 
 developer_instructions = '''

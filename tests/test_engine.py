@@ -252,6 +252,25 @@ def test_address_table_cells_and_unified_credit_code_are_covered():
     assert restore_text(result.masked_text, result.vault) == result.normalized_text
 
 
+def test_labelled_identifiers_and_extended_address_labels_are_masked():
+    source = "\n".join(
+        [
+            "合同编号：A000000000000000",
+            "身份证号：11010519491231002X",
+            "送达地址：北京市朝阳区建国路88号",
+            "收件地址：上海市浦东新区世纪大道1号",
+        ]
+    )
+
+    result = Desensitizer(load_config()).anonymize(source)
+
+    assert "A000000000000000" not in result.masked_text
+    assert "11010519491231002X" not in result.masked_text
+    assert "北京市朝阳区建国路88号" not in result.masked_text
+    assert "上海市浦东新区世纪大道1号" not in result.masked_text
+    assert restore_text(result.masked_text, result.vault) == result.normalized_text
+
+
 def test_bank_branch_suffix_is_masked_after_bank_root():
     result = Desensitizer(load_config()).anonymize("招商银行深圳分行；中国银行北京中银大厦支行")
 

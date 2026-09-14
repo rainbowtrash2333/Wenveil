@@ -1,6 +1,6 @@
 # 路线图（ROADMAP）
 
-> 版本：V0.3（2026-09-12）｜状态：生效
+> 版本：V0.4（2026-09-14）｜状态：生效
 > 本文档定义 Wenveil（文隐）的阶段目标与里程碑；当前能力清单见
 > [APP-VERSION.md](./APP-VERSION.md)。
 
@@ -30,8 +30,8 @@
 
 ### 阶段 3：小模型增强（进行中）
 
-- [ ] 用授权金融文档和合成数据建立文档级切分的数据集版本。
-- [ ] 微调 Qwen Token Classification 主干，评估 PERSON/ORG/PROJECT/关系候选召回。
+- [x] 用合成数据建立文档级严格切分、滑窗标签和独立 benchmark；增加固定外部 train/dev/test/hard_test 适配与安全校验。
+- [x] 完成 Qwen3.5 Token Classification 微调入口、best/resume 和独立 exact-span 评估；授权语料上的 PERSON/ORG/PROJECT/关系召回仍待验证。
 - [ ] 仅对歧义机构候选启用轻量 linking head/adapter；规则和白名单仍为最终安全边界。
 - [ ] 以残留率、误脱敏率、别名链接准确率和恢复一致性设定上线门槛。
 
@@ -39,8 +39,11 @@
 
 - [x] 移植独立 OCR 转换模块，提供 `ocr` CLI 和可选重依赖。
 - [x] 提取独立 OCR 文本整理模块，提供 `organize` CLI；三个功能模块可单独调用。
+- [x] 建立 Tauri + React 桌面开发 UI，覆盖处理、恢复、进度、结果和设置；通过 JSON Lines Sidecar 复用 Python 模块。
+- [ ] 完成 Python Sidecar 的离线发布捆绑、安装包签名和升级/回滚演练。
 - [ ] 批量目录处理、任务级安全 ID 和可观测计数。
 - [ ] 建立不同文档规模的吞吐/内存基线，评估 ONNX 或量化部署。
+- [x] 完成 Qwen3.5 ONNX 导出、PyTorch/ORT parity 和 DirectML 优先/CPU 回退适配；固定长度图的性能基线仍待建立。
 - [ ] 增加离线交付包、配置版本锁定和回滚演练。
 
 ## 3. 决策记录
@@ -49,6 +52,8 @@
 |-----|------|------|
 | [ADR-0001](./adr/0001-hybrid-reversible-desensitization.md) | 混合式确定性可逆脱敏、加密映射与白名单边界 | 已接受 |
 | [ADR-0002](./adr/0002-independent-processing-modules.md) | OCR、文本整理与脱敏模块独立化 | 已接受 |
+| [ADR-0003](./adr/0003-tauri-desktop-ui.md) | Tauri 桌面端与 Python Sidecar | 已接受 |
+| [ADR-0004](./adr/0004-qwen35-token-classification-onnx.md) | Qwen3.5 Token Classification 与 ONNX 离线部署 | 已接受 |
 
 > 新增重大技术路线时，在 `docs/adr/` 建立递增编号的 ADR，并在本表登记。
 
@@ -59,3 +64,5 @@
 | 2026-09-12 | 阶段 1–2 | 完成核心脱敏、机构关系、公共白名单、三文档验收和项目治理整理 |
 | 2026-09-12 | 阶段 3 | 保留本地 Qwen 数据/训练脚手架，等待授权语料和模型训练环境 |
 | 2026-09-12 | 阶段 4 | 接入独立 OCR 转换和 OCR 文本整理模块，建立三模块文件契约 |
+| 2026-09-12 | 阶段 4 | 建立 Tauri + React 桌面开发 UI、JSON Lines Sidecar 和浏览器 HTTP 验收适配器；发布捆绑待后续 |
+| 2026-09-14 | 阶段 3–4 | 完成 Qwen3.5 本地下载、正式合成训练/best、独立 test 与 subset 指标、ONNX parity、CPU 回退及现有 Resolver/Mapping/restore 实测；授权语料与性能基线待后续 |
