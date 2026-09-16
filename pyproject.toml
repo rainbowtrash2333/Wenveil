@@ -24,6 +24,8 @@ ocr = [
   "numpy>=1.24.0",
   "rapidocr>=3.8.1",
   "onnxruntime>=1.17.0",
+  "extract-msg>=0.56.0",
+  "pywin32>=306; platform_system == 'Windows'",
 ]
 ocr-directml = [
   "onnxruntime-directml>=1.24.4",
@@ -48,12 +50,14 @@ model-directml = [
 desense = "desensitize.cli:main"
 ocr-convert = "ocr.cli:main"
 organize-text = "organize.cli:main"
+wenveil-workflow = "workflow.__main__:main"
 
 [tool.setuptools.packages.find]
-include = ["common*", "desensitize*", "ocr*", "organize*", "training*"]
+include = ["common*", "desensitize*", "ocr*", "organize*", "training*", "workflow*"]
 
 [tool.setuptools.package-data]
 desensitize = ["config/*.yaml", "rules/*.txt", "rules/*.yaml"]
+workflow = ["migrations/*.sql"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

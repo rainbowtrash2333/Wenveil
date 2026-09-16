@@ -44,6 +44,16 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="断点续跑：保留已有输出并跳过已完成项目（长任务中断后继续）",
     )
+    parser.add_argument(
+        "--profile",
+        action="store_true",
+        help="记录完整处理生命周期的安全性能 profile",
+    )
+    parser.add_argument(
+        "--profile-output",
+        default=None,
+        help="性能 profile JSON 输出路径（需同时启用 --profile）",
+    )
     return parser
 
 
@@ -68,6 +78,10 @@ def main(argv: list[str] | None = None) -> None:
         config.ocr.enabled = False
     if args.no_progress:
         config.concurrency.show_progress = False
+    if args.profile:
+        config.profiling.enabled = True
+    if args.profile_output:
+        config.profiling.output = args.profile_output
 
     # 初始化日志系统
     logger = setup_logging(config.logging)

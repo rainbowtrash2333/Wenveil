@@ -1,7 +1,8 @@
 """
 文档转换器模块。
 
-根据文件扩展名将转换请求路由到对应的处理策略。支持四种转换路径：
+根据文件扩展名将转换请求路由到对应的处理策略。特殊输入会先经过
+``ocr.file_converter`` 的归档展开、旧版 Office 转换或 MSG 提取，再进入现有路径：
 1. Docling 转换 — PDF/DOCX/PPTX/XLSX 使用 Docling 库 + 本地 RapidOCR
 2. 图片 OCR    — JPG/PNG/BMP/TIFF/GIF 使用本地 RapidOCR 引擎识别
 3. 文本直读    — TXT/MD/RTF 直接读取文件内容
@@ -19,32 +20,19 @@ from typing import Optional
 from PIL import Image
 
 from ocr.config import Config
+from ocr.file_converter import FileConverter
+from ocr.formats import (
+    CODE_EXTENSIONS,
+    DOCLING_EXTENSIONS,
+    IMAGE_EXTENSIONS,
+    SPECIAL_EXTENSIONS,
+    TEXT_EXTENSIONS,
+)
+from ocr.profiling import DocumentProfile, ProfileSession, fingerprint_file
 from ocr.rapid_ocr import LocalOcrEngine, compress_image
 from ocr.safety import safe_id
 
 logger = logging.getLogger("wenveil.ocr")
-
-# ─── 扩展名分类 ────────────────────────────────────────────────
-
-IMAGE_EXTENSIONS = {
-    ".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".gif",
-}
-"""图片文件扩展名 —— 使用本地 RapidOCR 引擎进行文字识别。"""
-
-TEXT_EXTENSIONS = {
-    ".txt", ".md", ".rtf",
-}
-"""纯文本文件扩展名 —— 直接读取文件内容不做转换。"""
-
-CODE_EXTENSIONS = {
-    ".html", ".htm", ".xml", ".json",
-}
-"""代码/结构数据文件扩展名 —— 包裹在 Markdown 代码块中。"""
-
-DOCLING_EXTENSIONS = {
-    ".pdf", ".docx", ".pptx", ".xlsx",
-}
-"""文档文件扩展名 —— 使用 Docling 库进行格式转换，PDF 的 OCR 使用本地 RapidOCR 后端。"""
 
 
 class DocumentConverter:
@@ -59,15 +47,26 @@ class DocumentConverter:
         ocr_engine: 本地 RapidOCR 引擎实例。
     """
 
-    def __init__(self, config: Config):
+    def __init__(
+        self,
+        config: Config,
+        profile_session: Optional[ProfileSession] = None,
+    ):
         """初始化文档转换器。
 
         Args:
             config: 全局配置对象。
         """
         self.config = config
+        self.profile_session = profile_session
+        if self.profile_session is None and config.profiling.enabled:
+            self.profile_session = ProfileSession(
+                config,
+                include_page_profiles=config.profiling.include_page_profiles,
+            )
         # Docling 很重；只有遇到 PDF/DOCX/PPTX/XLSX 时才初始化。
         self.docling_converter = None
+        self.file_converter = FileConverter(config.file_converter)
         # 创建本地 OCR 引擎（用于图片文件的 OCR 识别）
         self.ocr_engine = LocalOcrEngine(config.ocr)
 
@@ -134,6 +133,12 @@ class DocumentConverter:
                 use_gpu=self.config.ocr.use_gpu,
                 model_dir=self.config.ocr.model_dir,
                 image_scale=self.config.ocr.image_scale,
+                use_angle_cls=self.config.ocr.use_angle_cls,
+                text_score=self.config.ocr.text_score,
+                box_score=self.config.ocr.box_score,
+                min_valid_text_chars=self.config.docling.min_valid_text_chars,
+                intra_op_num_threads=self.config.ocr.intra_op_num_threads,
+                inter_op_num_threads=self.config.ocr.inter_op_num_threads,
             )
             logger.info(
                 "Docling 已配置使用本地 RapidOCR 后端（语言: %s）",
@@ -165,30 +170,109 @@ class DocumentConverter:
             文件的 Markdown 表示。转换失败时返回带有错误信息的文本。
         """
         ext = filepath.suffix.lower()
-        logger.info("正在转换 file_id=%s", safe_id(filepath.name))
+        profile = None
+        document_id = safe_id(filepath.name)
+        if self.profile_session is not None:
+            profile = DocumentProfile(
+                document_id=document_id,
+                extension=ext or "<none>",
+            )
+            self.profile_session.record_event(
+                "document.profile_start",
+                document_id=document_id,
+            )
+        logger.info("正在转换 file_id=%s", document_id)
 
         try:
-            if ext in DOCLING_EXTENSIONS:
-                return self._convert_with_docling(filepath)
-            elif ext in IMAGE_EXTENSIONS:
-                return self._convert_image(filepath)
-            elif ext in TEXT_EXTENSIONS:
-                return self._convert_text(filepath)
-            elif ext in CODE_EXTENSIONS:
-                return self._convert_code(filepath)
-            elif ext == ".csv":
-                return self._convert_csv(filepath)
+            if profile is not None:
+                with profile.stage("input.fingerprint"):
+                    try:
+                        profile.size_bytes, profile.source_sha256 = fingerprint_file(
+                            filepath,
+                            include_hash=self.config.profiling.hash_inputs,
+                        )
+                    except (OSError, ValueError) as error:
+                        profile.set_counter(
+                            "input_fingerprint_error", type(error).__name__
+                        )
+
+            def dispatch() -> str:
+                if ext in SPECIAL_EXTENSIONS:
+                    return self.file_converter.convert(
+                        filepath,
+                        lambda prepared: self._dispatch_supported(
+                            prepared,
+                            profile=profile,
+                        ),
+                    )
+                return self._dispatch_supported(filepath, profile=profile)
+
+            if profile is None:
+                result = dispatch()
             else:
-                # 未分类的扩展名作为纯文本处理
-                return self._convert_text(filepath)
+                with profile.stage("document.processing"):
+                    result = dispatch()
+            if profile is not None:
+                profile.set_counter("output_chars", len(result or ""))
+                profile.set_counter("output_lines", (result or "").count("\n"))
+                profile.finish(status="success")
+                self.profile_session.record_event(
+                    "document.profile_finish",
+                    document_id=document_id,
+                )
+            return result
         except Exception as e:
+            if profile is not None:
+                profile.finish(status="error", error_type=type(e).__name__)
+                self.profile_session.record_event(
+                    "document.profile_finish_error",
+                    document_id=document_id,
+                )
             logger.error(
                 "转换失败 file_id=%s type=%s",
-                safe_id(filepath.name), type(e).__name__,
+                document_id, type(e).__name__,
             )
             return "> *[转换失败，详见安全日志摘要]*\n"
+        finally:
+            if profile is not None:
+                self.profile_session.record_event(
+                    "document.record_before",
+                    document_id=document_id,
+                )
+                self.profile_session.record_document(profile)
+                self.profile_session.record_event(
+                    "document.record_after",
+                    document_id=document_id,
+                )
 
-    def _convert_with_docling(self, filepath: Path) -> str:
+    def _dispatch_supported(
+        self,
+        filepath: Path,
+        *,
+        profile: Optional[DocumentProfile] = None,
+    ) -> str:
+        """处理已转换为现有 OCR 支持格式的文件。"""
+
+        ext = filepath.suffix.lower()
+        if ext in DOCLING_EXTENSIONS:
+            return self._convert_with_docling(filepath, profile=profile)
+        if ext in IMAGE_EXTENSIONS:
+            return self._convert_image(filepath, profile=profile)
+        if ext in TEXT_EXTENSIONS:
+            return self._convert_text(filepath, profile=profile)
+        if ext in CODE_EXTENSIONS:
+            return self._convert_code(filepath, profile=profile)
+        if ext == ".csv":
+            return self._convert_csv(filepath, profile=profile)
+        # 直接调用 convert() 时保留旧的纯文本兼容行为；批量入口先做白名单校验。
+        return self._convert_text(filepath, profile=profile)
+
+    def _convert_with_docling(
+        self,
+        filepath: Path,
+        *,
+        profile: Optional[DocumentProfile] = None,
+    ) -> str:
         """使用 Docling 库转换文档文件。
 
         将 PDF/DOCX/PPTX/XLSX 文件通过 Docling 转换为结构化文档，
@@ -203,15 +287,89 @@ class DocumentConverter:
         Raises:
             RuntimeError: docling 未安装时抛出。
         """
-        if self.docling_converter is None:
-            self.docling_converter = self._create_docling_converter()
+        if filepath.suffix.lower() == ".pdf" and self.config.ocr.enabled:
+            from ocr.pdf_preflight import inspect_pdf
 
-        result = self.docling_converter.convert(str(filepath))
-        markdown = result.document.export_to_markdown()
-        gc.collect()
+            try:
+                if profile is None:
+                    preflight = inspect_pdf(
+                        filepath,
+                        min_valid_text_chars=self.config.docling.min_valid_text_chars,
+                        scan_bitmap_threshold=self.config.docling.scan_bitmap_threshold,
+                    )
+                else:
+                    with profile.stage("pdf.preflight"):
+                        preflight = inspect_pdf(
+                            filepath,
+                            min_valid_text_chars=self.config.docling.min_valid_text_chars,
+                            scan_bitmap_threshold=self.config.docling.scan_bitmap_threshold,
+                        )
+                if profile is not None:
+                    profile.set_counter("total_pages", preflight.total_pages)
+                    profile.set_counter(
+                        "valid_text_pages", len(preflight.valid_text_pages)
+                    )
+                    profile.set_counter(
+                        "large_bitmap_pages", len(preflight.large_bitmap_pages)
+                    )
+                    profile.set_counter(
+                        "scan_fast_candidate", preflight.scan_fast_candidate
+                    )
+                logger.info(
+                    "PDF 页级预检 file_id=%s pages=%d valid_text_pages=%d bitmap_pages=%d",
+                    safe_id(filepath.name),
+                    preflight.total_pages,
+                    len(preflight.valid_text_pages),
+                    len(preflight.large_bitmap_pages),
+                )
+                if self.config.docling.scan_fast_path and preflight.scan_fast_candidate:
+                    from ocr.pdf_fast import convert_scanned_pdf
+
+                    if profile is None:
+                        return convert_scanned_pdf(filepath, self.config, preflight)
+                    with profile.stage("pdf.fast_path"):
+                        profile.set_counter("route", "pdf_fast")
+                        return convert_scanned_pdf(
+                            filepath,
+                            self.config,
+                            preflight,
+                            profile=profile,
+                        )
+            except Exception as error:
+                logger.warning(
+                    "PDF 页级预检失败 file_id=%s type=%s，继续使用 Docling",
+                    safe_id(filepath.name), type(error).__name__,
+                )
+
+        if profile is not None:
+            profile.set_counter("route", "docling")
+        if self.docling_converter is None:
+            if profile is None:
+                self.docling_converter = self._create_docling_converter()
+            else:
+                with profile.stage("docling.initialize"):
+                    self.docling_converter = self._create_docling_converter()
+
+        if profile is None:
+            result = self.docling_converter.convert(str(filepath))
+            markdown = result.document.export_to_markdown()
+            gc.collect()
+            return markdown
+
+        with profile.stage("docling.convert"):
+            result = self.docling_converter.convert(str(filepath))
+        with profile.stage("markdown.export"):
+            markdown = result.document.export_to_markdown()
+        with profile.stage("runtime.gc"):
+            gc.collect()
         return markdown
 
-    def _convert_image(self, filepath: Path) -> str:
+    def _convert_image(
+        self,
+        filepath: Path,
+        *,
+        profile: Optional[DocumentProfile] = None,
+    ) -> str:
         """使用本地 RapidOCR 识别图片中的文字。
 
         打开图片文件，通过本地 OCR 引擎进行文字检测和识别，
@@ -223,11 +381,21 @@ class DocumentConverter:
         Returns:
             包含 OCR 文本的 Markdown 字符串。
         """
-        image = Image.open(filepath)
-        image = compress_image(image, self.config.ocr.max_image_size)
+        if profile is None:
+            image = Image.open(filepath)
+            image = compress_image(image, self.config.ocr.max_image_size)
+        else:
+            with profile.stage("image.open"):
+                image = Image.open(filepath)
+            with profile.stage("image.compress"):
+                image = compress_image(image, self.config.ocr.max_image_size)
 
         try:
-            ocr_results = self.ocr_engine.ocr(image)
+            if profile is None:
+                ocr_results = self.ocr_engine.ocr(image)
+            else:
+                with profile.stage("ocr.inference"):
+                    ocr_results = self.ocr_engine.ocr(image)
         except Exception:
             logger.warning("OCR 对 file_id=%s 识别失败，返回占位内容", safe_id(filepath.name))
             file_id = safe_id(filepath.name)
@@ -237,14 +405,28 @@ class DocumentConverter:
             file_id = safe_id(filepath.name)
             return f"![document-{file_id}](document-{file_id})\n\n*[未检测到文字]*\n"
 
-        lines = [f"### 图片: document-{safe_id(filepath.name)}\n"]
-        for result in ocr_results:
-            if result.text.strip():
-                lines.append(f"{result.text}")
-        lines.append("")
-        return "\n".join(lines)
+        if profile is None:
+            lines = [f"### 图片: document-{safe_id(filepath.name)}\n"]
+            for result in ocr_results:
+                if result.text.strip():
+                    lines.append(f"{result.text}")
+            lines.append("")
+            return "\n".join(lines)
 
-    def _convert_text(self, filepath: Path) -> str:
+        with profile.stage("markdown.build"):
+            lines = [f"### 图片: document-{safe_id(filepath.name)}\n"]
+            for result in ocr_results:
+                if result.text.strip():
+                    lines.append(f"{result.text}")
+            lines.append("")
+            return "\n".join(lines)
+
+    def _convert_text(
+        self,
+        filepath: Path,
+        *,
+        profile: Optional[DocumentProfile] = None,
+    ) -> str:
         """直接读取纯文本文件内容。
 
         优先使用配置的编码，失败时回退到 latin-1。
@@ -255,12 +437,23 @@ class DocumentConverter:
         Returns:
             文件文本内容。
         """
-        try:
-            return filepath.read_text(encoding=self.config.output.encoding)
-        except UnicodeDecodeError:
-            return filepath.read_text(encoding="latin-1")
+        if profile is None:
+            try:
+                return filepath.read_text(encoding=self.config.output.encoding)
+            except UnicodeDecodeError:
+                return filepath.read_text(encoding="latin-1")
+        with profile.stage("text.read"):
+            try:
+                return filepath.read_text(encoding=self.config.output.encoding)
+            except UnicodeDecodeError:
+                return filepath.read_text(encoding="latin-1")
 
-    def _convert_code(self, filepath: Path) -> str:
+    def _convert_code(
+        self,
+        filepath: Path,
+        *,
+        profile: Optional[DocumentProfile] = None,
+    ) -> str:
         """将代码/数据文件包裹为 Markdown 代码块。
 
         根据扩展名自动选择语言标注（html/xml/json），
@@ -272,7 +465,7 @@ class DocumentConverter:
         Returns:
             带有语言标注的 Markdown 代码块字符串。
         """
-        content = self._convert_text(filepath)
+        content = self._convert_text(filepath, profile=profile)
         ext = filepath.suffix.lstrip(".").lower()
         lang_map = {
             "html": "html", "htm": "html",
@@ -281,7 +474,12 @@ class DocumentConverter:
         language = lang_map.get(ext, "")
         return f"```{language}\n{content}\n```\n"
 
-    def _convert_csv(self, filepath: Path) -> str:
+    def _convert_csv(
+        self,
+        filepath: Path,
+        *,
+        profile: Optional[DocumentProfile] = None,
+    ) -> str:
         """将 CSV 文件转换为 Markdown 表格。
 
         第一行作为表头，后续行作为数据行。自动补齐
@@ -293,7 +491,11 @@ class DocumentConverter:
         Returns:
             Markdown 表格字符串。空文件返回提示文本。
         """
-        content = filepath.read_text(encoding=self.config.output.encoding)
+        if profile is None:
+            content = filepath.read_text(encoding=self.config.output.encoding)
+        else:
+            with profile.stage("csv.read"):
+                content = filepath.read_text(encoding=self.config.output.encoding)
         reader = csv.reader(io.StringIO(content))
         rows = list(reader)
         if not rows:

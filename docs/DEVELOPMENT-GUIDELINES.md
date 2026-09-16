@@ -1,6 +1,6 @@
 # 开发规范（DEVELOPMENT-GUIDELINES）
 
-> 版本：V0.3（2026-09-12）｜状态：生效
+> 版本：V0.5（2026-09-17）｜状态：生效
 > 本文档定义 Wenveil（文隐）的 Python 开发、测试、审计和质量门禁；代码评审与提交以此为准。
 
 ## 1. 总则
@@ -34,9 +34,11 @@
 - 规整幂等，且恢复结果等于规范化原文。
 - 实体重叠由 Resolver 统一处理；白名单精确保留，但不能放行更长私有机构。
 - 机构全称、简称、子公司/分公司使用稳定且短的关系 Token。
-- mapping 加密、篡改、错误密码、Token 缺失和文件哈希不一致均失败。
+- 可恢复模式的 mapping 加密、篡改、错误密码、Token 缺失和文件哈希不一致均失败；无密码模式不得生成未加密 mapping。
 - 审计发现高风险残留、未知 Token、Token 冲突和 Markdown 结构损坏时给出非零结果。
 - 训练标签去标签后与原文一致，并按文档 ID 切分防止泄漏。
+- 文件前置转换必须用合成 ZIP/嵌套归档和 mock Office/MSG 适配器测试；实际 Office/7-Zip 验收只能使用临时目录，
+  不得读取或复制授权资料到仓库。
 
 ## 4. 测试写法与质量门禁
 
@@ -49,7 +51,7 @@
 ## 5. 运行命令
 
 ```powershell
-python -m compileall -q common desensitize ocr organize training
+python -m compileall -q common desensitize ocr organize training workflow
 pytest -q
 python -m desensitize --help
 python -m ocr --help

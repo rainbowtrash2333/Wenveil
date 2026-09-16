@@ -11,6 +11,7 @@
 """
 
 import logging
+import time
 from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple
 
@@ -21,6 +22,17 @@ from PIL import Image
 from ocr.config import OcrConfig
 
 logger = logging.getLogger("wenveil.ocr")
+
+
+def _select_backend(config: OcrConfig, providers: set[str]) -> str:
+    """按实际 ONNX Runtime provider 选择推理后端，避免配置开关造成误报。"""
+
+    normalized = {provider.lower() for provider in providers}
+    if config.use_dml and "dmlexecutionprovider" in normalized:
+        return "dml"
+    if config.use_gpu and "cudaexecutionprovider" in normalized:
+        return "cuda"
+    return "cpu"
 
 
 def compress_image(image: Image.Image, max_size: int) -> Image.Image:
@@ -109,6 +121,13 @@ class LocalOcrEngine:
         self.enabled: bool = config.enabled
         self._config = config
         self._engine: Any = None  # 延迟初始化，避免在不启用 OCR 时加载模型
+        self._last_initialization_ms: float = 0.0
+
+    @property
+    def last_initialization_ms(self) -> float:
+        """最近一次 OCR 调用触发的模型初始化耗时。"""
+
+        return self._last_initialization_ms
 
     def _get_engine(self):
         """获取或初始化 RapidOCR 引擎（懒加载）。
@@ -120,6 +139,7 @@ class LocalOcrEngine:
             RapidOCR 实例。
         """
         if self._engine is not None:
+            self._last_initialization_ms = 0.0
             return self._engine
 
         if not self.enabled:
@@ -127,16 +147,34 @@ class LocalOcrEngine:
 
         from rapidocr import RapidOCR
 
+        try:
+            import onnxruntime as ort
+
+            providers = set(ort.get_available_providers())
+        except Exception:
+            providers = set()
+        backend_name = _select_backend(self._config, providers)
+        if (self._config.use_dml or self._config.use_gpu) and backend_name == "cpu":
+            logger.warning("请求的 GPU provider 不可用，RapidOCR 回退 CPU")
+
         # 构建 RapidOCR 参数
         params = {
             "Global.text_score": self._config.text_score,
             "Det.box_thresh": self._config.box_score,
         }
+        if self._config.intra_op_num_threads != -1:
+            params[
+                "EngineConfig.onnxruntime.intra_op_num_threads"
+            ] = self._config.intra_op_num_threads
+        if self._config.inter_op_num_threads != -1:
+            params[
+                "EngineConfig.onnxruntime.inter_op_num_threads"
+            ] = self._config.inter_op_num_threads
         if self._config.model_dir:
             params["Global.model_root_dir"] = self._config.model_dir
 
         # 设备选择：DirectML > CUDA > CPU
-        if self._config.use_dml:
+        if backend_name == "dml":
             # AMD Radeon / Intel 集显 — 通过 DirectML 使用 GPU
             params["Det.use_dml"] = True
             params["Cls.use_dml"] = True
@@ -144,7 +182,7 @@ class LocalOcrEngine:
             params["Det.use_cuda"] = False
             params["Cls.use_cuda"] = False
             params["Rec.use_cuda"] = False
-        elif self._config.use_gpu:
+        elif backend_name == "cuda":
             # NVIDIA GPU — 通过 CUDA 使用 GPU
             params["Det.use_cuda"] = True
             params["Cls.use_cuda"] = True
@@ -161,11 +199,18 @@ class LocalOcrEngine:
             params["Cls.use_dml"] = False
             params["Rec.use_dml"] = False
 
-        self._engine = RapidOCR(params=params)
+        initialization_started = time.perf_counter()
+        try:
+            self._engine = RapidOCR(params=params)
+        finally:
+            self._last_initialization_ms = round(
+                (time.perf_counter() - initialization_started) * 1000,
+                3,
+            )
 
-        if self._config.use_dml:
+        if backend_name == "dml":
             backend = "DirectML (AMD/Intel GPU)"
-        elif self._config.use_gpu:
+        elif backend_name == "cuda":
             backend = "CUDA (NVIDIA GPU)"
         else:
             backend = "CPU"

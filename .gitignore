@@ -16,13 +16,24 @@ docs/*_merged.md
 **/*.xlsx
 **/*.ppt
 **/*.pptx
+**/*.msg
 **/*.png
 **/*.jpg
 **/*.jpeg
 **/*.tif
 **/*.tiff
 **/*.zip
+**/*.rar
 **/*.7z
+**/*.tar
+**/*.gz
+**/*.tgz
+**/*.bz2
+**/*.tbz2
+**/*.xz
+**/*.txz
+**/*.cab
+**/*.iso
 # Client/project-specific rules and local configuration stay outside Git.
 rules/projects.local.txt
 desensitize/rules/projects.local.txt
@@ -62,7 +73,17 @@ local.properties
 *.iml
 # 打包/归档产物（确有必须入库的测试夹具时用 !path 显式放行）
 *.zip
+*.rar
 *.7z
+*.tar
+*.gz
+*.tgz
+*.bz2
+*.tbz2
+*.xz
+*.txz
+*.cab
+*.iso
 # 缓存
 __pycache__/
 *.pyc

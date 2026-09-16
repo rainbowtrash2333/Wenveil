@@ -1,6 +1,6 @@
 # 架构决策记录（ADR）
 
-> 版本：V0.4（2026-09-14）｜状态：生效
+> 版本：V0.6（2026-09-17）｜状态：生效
 
 本目录存放 Wenveil（文隐）的重大技术决策记录。**技术路线变更必须先在此记录讨论，
 再实施**（见 [../DOCUMENTATION-GUIDE.md](../DOCUMENTATION-GUIDE.md) §5.4）。
@@ -43,3 +43,5 @@
 | [ADR-0002](./0002-independent-processing-modules.md) | OCR、文本整理与脱敏模块独立化 | 已接受 |
 | [ADR-0003](./0003-tauri-desktop-ui.md) | Tauri 桌面端与 Python Sidecar | 已接受 |
 | [ADR-0004](./0004-qwen35-token-classification-onnx.md) | Qwen3.5 Token Classification 与 ONNX 离线部署 | 已接受 |
+| [ADR-0005](./0005-unified-workflow-sqlite-state.md) | 统一工作流服务与 SQLite 作业状态库 | 已接受 |
+| [ADR-0006](./0006-file-conversion-preprocessing.md) | OCR 前置文件转换与受控归档展开 | 已接受 |

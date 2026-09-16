@@ -1,6 +1,6 @@
 # Wenveil 脱敏设计规格
 
-> 版本：V0.4（2026-09-14）｜状态：生效
+> 版本：V0.5（2026-09-16）｜状态：生效
 > 本文原名“OCR 审计文档可逆脱敏系统实施方案”；方案已落地，因此只保留尚未被其他文档
 > 覆盖的设计规格、测试要求与验收标准。现状、命令与阶段进度以 [index.md](./index.md)
 > 指向的文档为准。
@@ -500,7 +500,7 @@ assert normalize(normalize(x)) == normalize(x)
 
 ---
 
-## 9.2 可逆性
+## 9.2 可恢复模式可逆性
 
 必须：
 
@@ -551,6 +551,14 @@ assert restored == normalized
 - 原文中存在类似 token 字符串
 
 必须明确报错。
+
+---
+
+## 9.6 无密码不可逆模式
+
+未设置密码时，`mask` 仍必须完成规整、识别、替换和审计，但不得生成未加密 mapping；输出只包含
+脱敏文本和安全报告，不保留自动生成的规范化原文。报告和 CLI/Sidecar 结果必须明确标记为不可恢复，
+恢复流程只能对带加密 mapping 的可恢复结果执行。
 
 ---
 
@@ -630,10 +638,11 @@ Peak RAM
 - 支持自定义词典。
 - 支持自定义正则。
 - 支持恢复。
+- 未设置密码仍可生成不可恢复的脱敏文本，不生成 mapping。
 
 ## 12.2 正确性
 
-必须：
+可恢复模式必须：
 
 ```text
 restore(mask(normalize(x)))
@@ -643,7 +652,7 @@ normalize(x)
 
 ## 12.3 安全
 
-- mapping 加密。
+- 可恢复模式的 mapping 使用 AES-GCM 加密；无密码模式不生成 mapping。
 - 日志无敏感原文。
 - mapping 与 masked 文件绑定。
 - 篡改可以检测。
@@ -680,13 +689,16 @@ normalize(x)
 ⟦机构1-子公司1⟧           # 机构1 的子公司/地域主体1
 ```
 
-短占位符只在当前文档/任务内稳定，不表达真实公司名称。原始表面词、全称、别名、地域和关系写入加密 mapping；报告只输出数量和类别，不输出原值。唯一链接的别名保留 `机构N-别名N` 关系语义；歧义别名仍脱敏为普通 `机构N`，不伪造主体关系。这样既保留可确认的“同主体/从属主体”语义，又不会把真实名称放进供大模型读取的文本。新 mapping 使用 compact-v1；旧 mapping 仍可按旧 Token 格式恢复。
+短占位符只在当前文档/任务内稳定，不表达真实公司名称。可恢复模式将原始表面词、全称、别名、地域和关系写入加密 mapping；无密码模式丢弃 mapping，因而不可恢复。报告只输出数量和类别，不输出原值。唯一链接的别名保留 `机构N-别名N` 关系语义；歧义别名仍脱敏为普通 `机构N`，不伪造主体关系。这样既保留可确认的“同主体/从属主体”语义，又不会把真实名称放进供大模型读取的文本。新 mapping 使用 compact-v1；旧 mapping 仍可按旧 Token 格式恢复。
 
 人员名单也采用同文档内的一致性策略：联系人、董事会成员和部门名册中已高置信识别的短姓名，后续重复出现时复用同一 `⟦人员N⟧`；传播只允许来自名单类规则且要求姓名至少重复出现两次，避免把普通职务词扩散为人员实体。
 
 ## 13.3 文件名脱敏
 
-CLI 输出统一使用 `document-<safe-id>.<kind>.md`、`document-<safe-id>.mapping.enc` 和 `document-<safe-id>.report.json`。`safe-id` 由任务 ID 与输入文件名计算，不可逆且不包含原文件名。原文件名只作为加密 mapping 的字段保存；普通还原仍使用安全文件名，确有权限时才显式使用 `--restore-filename`。
+CLI 输出统一使用 `document-<safe-id>.masked.md` 和 `document-<safe-id>.report.json`；设置密码的可恢复模式
+另外生成 `document-<safe-id>.normalized.md` 和 `document-<safe-id>.mapping.enc`。`safe-id` 由任务 ID 与输入文件名计算，
+不可逆且不包含原文件名。原文件名只作为加密 mapping 的字段保存；普通还原仍使用安全文件名，确有权限时才显式使用
+`--restore-filename`。无密码模式不生成 mapping，也不能恢复。
 
 ## 13.4 金融领域训练与验收
 
@@ -694,7 +706,7 @@ CLI 输出统一使用 `document-<safe-id>.<kind>.md`、`document-<safe-id>.mapp
 
 ## 13.5 交付验收条件
 
-- 授权输入文件均生成安全文件名的 masked、mapping 和 report 文件；
+- 可恢复模式生成安全文件名的 masked、mapping 和 report 文件；无密码模式只生成 masked 和 report 文件；
 - masked 文件审计无残留 PII、Token 冲突和 Markdown 结构损坏；
 - 全称、简称、子公司关系在报告中只体现为安全计数，在 masked 文本中体现为伪主体 ID；
 - mapping 解密后恢复结果与规范化原文逐字节一致；

@@ -1,6 +1,8 @@
 # Wenveil desktop UI
 
 这是与现有 Python 包隔离的 React + TypeScript + Vite UI。界面只通过 `src/bridge.ts` 的桥接接口调用处理能力。
+脱敏密码为可选项：设置密码会生成 AES-GCM 映射并支持恢复；留空仍可脱敏，但只生成不可恢复的
+`masked.md`，不生成映射文件。
 
 ## 启动
 
@@ -34,7 +36,7 @@ npm run tauri:dev
 python desktop/bridge/sidecar.py
 ```
 
-sidecar 从 stdin 读取一行 JSON，向 stdout 返回 `progress`、`result` 或 `error` 事件。`process` 使用现有 OCR、organize、desensitize 和 audit 模块；`restore` 复用加密映射的完整性校验。桌面宿主只需把文件选择器得到的本地绝对路径放进 `files[].path`，并把这些事件转发给前端。
+sidecar 从 stdin 读取一行 JSON，向 stdout 返回 `progress`、`result` 或 `error` 事件。`process` 使用现有 OCR、organize、desensitize 和 audit 模块；OCR 前置层支持旧版 Office、MSG 和 ZIP/RAR/7z 归档。Windows 旧版 Office 转换需要 Microsoft Office 与 `pywin32`，RAR/7z 需要 7-Zip；有密码时 `restore` 复用加密映射的完整性校验，无密码结果没有可恢复映射。桌面宿主只需把文件选择器得到的本地绝对路径放进 `files[].path`，并把这些事件转发给前端。
 
 ## 验证
 

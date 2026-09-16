@@ -1,6 +1,6 @@
-# Wenveil（文隐）— OCR、文本整理与可逆脱敏
+# Wenveil（文隐）— OCR、文本整理与脱敏
 
-这是一个离线的中文文档处理工具，包含 OCR、OCR 文本整理、可逆脱敏三个可独立调用的模块。
+这是一个离线的中文文档处理工具，包含 OCR、OCR 文本整理、脱敏三个可独立调用的模块。
 推荐处理顺序为：
 
 Wenveil (文隐) is the public project name and `wenveil` is the Python distribution name. The repository
@@ -8,17 +8,17 @@ is designed for local, offline processing of authorized documents; it is not a p
 documents, filenames, masked outputs, mappings, passwords, or client-specific rule dictionaries.
 
 ```text
-OCR 文本 → 规整化 → 多路识别 → Span 冲突解析 → 一次性替换 → 加密映射
+OCR 文本 → 规整化 → 多路识别 → Span 冲突解析 → 一次性替换 → 可选加密映射
 ```
 
-识别器不会修改文本；所有偏移量都指向规整后的文本。还原时校验映射中的哈希，发现密码错误、映射被篡改、文本被替换或 Token 缺失会直接失败。
+识别器不会修改文本；所有偏移量都指向规整后的文本。可恢复模式还原时校验映射中的哈希，发现密码错误、映射被篡改、文本被替换或 Token 缺失会直接失败；无密码模式不提供还原能力。
 
 模块也可以单独调用：
 
 ```text
-ocr-convert   文档/图片 → Markdown
+ocr-convert   文档/图片/邮件/归档 → Markdown
 organize-text OCR Markdown/纯文本 → 整理后的 Markdown
-desense       Markdown/纯文本 → 脱敏文件 + 加密映射
+desense       Markdown/纯文本 → 脱敏文件 + 可选加密映射
 ```
 
 ## 安装与运行
@@ -43,6 +43,10 @@ python -m pip install -e ".[ocr]"
 python -m ocr --help
 python -m ocr --config config/ocr.yaml --root-dir .\test-artifacts\ocr-inputs --no-progress
 ```
+
+OCR 还支持 `.doc/.xls/.ppt` 旧版 Office、`.msg` 邮件以及 `.zip/.rar/.7z` 等常见归档：旧版 Office 在
+Windows 上通过本机 Office COM 转成 `.docx/.xlsx/.pptx`，MSG 提取为 Markdown，归档在临时目录中
+最多递归展开 3 层。RAR/7z 需要安装 7-Zip；Windows Office 转换需要 Microsoft Office 和 `pywin32`。
 
 ### OCR 文本整理
 
@@ -76,16 +80,26 @@ $env:DESENSE_PASSWORD = "change-me"
 python -m desensitize tests/fixtures/financial_desensitization_sample.md
 ```
 
-默认输出到 `test-artifacts/desensitization-outputs/`：
+密码是可选的。省略 `--password` 或 `DESENSE_PASSWORD` 时仍会执行脱敏，但只输出不可恢复的
+`masked.md` 和安全报告，不生成 `mapping.enc`；需要恢复时必须在脱敏时设置密码。
+
+```powershell
+python -m desensitize mask tests/fixtures/financial_desensitization_sample.md
+```
+
+无密码模式默认输出到 `test-artifacts/desensitization-outputs/`：
 
 ```text
-document-<safe-id>.normalized.md
 document-<safe-id>.masked.md
-document-<safe-id>.mapping.enc
 document-<safe-id>.report.json
 ```
 
-输出文件名使用不可逆的安全 ID，不沿用输入文件名。原始文件名仅作为加密映射中的可选元数据，只有显式使用 `--restore-filename` 才会恢复；普通还原仍输出安全文件名。授权原始 OCR 输入可放在 `test-artifacts/desensitization-inputs/`，该目录与输出目录均不入库。
+设置密码的可恢复模式还会生成 `document-<safe-id>.normalized.md` 和
+`document-<safe-id>.mapping.enc`；未设置密码时不会生成这两个文件。
+
+输出文件名使用不可逆的安全 ID，不沿用输入文件名。可恢复模式下原始文件名仅作为加密映射中的可选元数据，只有显式使用
+`--restore-filename` 才会恢复；普通还原仍输出安全文件名。授权原始 OCR 输入可放在
+`test-artifacts/desensitization-inputs/`，该目录与输出目录均不入库。
 
 还原和检查：
 
@@ -103,10 +117,10 @@ python -m desensitize audit test-artifacts/desensitization-outputs/document-<saf
 `model.enabled` 默认关闭。推荐将本地 Qwen3.5 Token Classification checkpoint 导出为
 ONNX 部署目录，并把 `model.backend` 设为 `onnx`、`model.path` 指向该目录后开启；Windows
 运行时优先尝试 DirectML，不可用时回退 CPU，且不导入 PyTorch。模型只输出候选实体 Span，
-最终替换仍由规则引擎、白名单、Resolver 和加密 mapping 完成。完整下载、训练、独立评估和
+最终替换仍由规则引擎、白名单、Resolver 和（可恢复模式下的）加密 mapping 完成。完整下载、训练、独立评估和
 导出命令见 [`training/README.md`](training/README.md)。
 
-机构简称/别名采用两阶段逻辑：第一阶段由规则、词典和可选 NER 模型找出全称、简称、子公司/分公司候选；第二阶段只对候选提及、局部上下文和注册表 Top-K 候选做实体链接。两阶段可以共享同一个 Qwen 主干和适配器，不需要再训练一个完整模型。当前占位符使用短语义格式：`⟦人员1⟧`、`⟦机构1⟧`、`⟦机构1-别名1⟧`、`⟦机构1-子公司1⟧`；真实全称、别名和关系只写入加密 mapping。若简称在同一文档中无法唯一链接，仍使用普通机构 Token 脱敏，不因歧义保留原简称，也不写入错误的主体关系。
+机构简称/别名采用两阶段逻辑：第一阶段由规则、词典和可选 NER 模型找出全称、简称、子公司/分公司候选；第二阶段只对候选提及、局部上下文和注册表 Top-K 候选做实体链接。两阶段可以共享同一个 Qwen 主干和适配器，不需要再训练一个完整模型。当前占位符使用短语义格式：`⟦人员1⟧`、`⟦机构1⟧`、`⟦机构1-别名1⟧`、`⟦机构1-子公司1⟧`；可恢复模式将真实全称、别名和关系写入加密 mapping，无密码模式不保存这些值。若简称在同一文档中无法唯一链接，仍使用普通机构 Token 脱敏，不因歧义保留原简称，也不写入错误的主体关系。
 
 名单、联系人、董事会成员和部门名册中已经确认的短姓名，在同一文档的重复无标签提及时会精确复用同一人员 Token；该传播只接受名单类高置信来源且要求原文至少出现两次，以降低职务词误判。
 

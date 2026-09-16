@@ -9,20 +9,52 @@ app:
     - .docx
     - .pptx
     - .xlsx
+    - .doc
+    - .xls
+    - .ppt
+    - .msg
+    - .zip
+    - .rar
+    - .7z
+    - .tar
+    - .gz
+    - .tgz
+    - .bz2
+    - .tbz2
+    - .xz
+    - .txz
+    - .cab
+    - .iso
     - .jpg
     - .jpeg
     - .png
     - .bmp
     - .tiff
+    - .tif
     - .gif
     - .txt
     - .md
+    - .markdown
     - .rtf
     - .html
     - .htm
     - .xml
     - .json
     - .csv
+
+# ─── 文件前置转换 ───
+file_converter:
+  enabled: true
+  # 为空时按 7z、7zz、7za 顺序查找；RAR/7z 需要安装 7-Zip。
+  archive_tool: null
+  archive_max_depth: 3
+  archive_max_entries: 10000
+  archive_max_uncompressed_bytes: 2147483648
+  archive_timeout_seconds: 300
+  # Windows 优先使用 Microsoft Office COM；auto 可在 COM 失败后尝试 LibreOffice。
+  office_backend: com
+  office_timeout_seconds: 180
+  msg_include_attachments: true
 
 # ─── 本地 RapidOCR 配置 ───
 ocr:
@@ -36,6 +68,8 @@ ocr:
   model_dir: null              # 发布目录中的本地 RapidOCR 模型目录
   max_image_size: 3508         # 图片最大边长（像素），超过则等比压缩以节省内存，默认为A4 300ppi
   image_scale: 1.0             # PDF OCR 页面图像放大倍率（1.0 为均衡值；精度不足可升 1.5~2.0，但耗时按面积增长）
+  intra_op_num_threads: -1     # 单个 RapidOCR ONNX 会话 CPU 线程数；-1 为自动
+  inter_op_num_threads: -1     # RapidOCR ONNX 算子间 CPU 线程数；-1 为自动
 
 # ─── Docling PDF 流水线配置 ───
 docling:
@@ -49,6 +83,10 @@ docling:
                                 # accurate 在个别扫描件上会陷入极慢路径（30分钟+无进展），
                                 # 批量任务建议 fast（表格结构略粗、速度大幅提升）
   document_timeout: 1200        # 单文档超时（秒），超时跳过并在输出中标记，防止卡死整条流水线
+  scan_fast_path: true           # 纯扫描 PDF 直接逐页 OCR，跳过不必要的版面/表格分析
+  min_valid_text_chars: 64       # 有效文本层最少字符数；少量页码/水印不算完整文本
+  scan_bitmap_threshold: 0.6     # 大面积图片覆盖率阈值
+  fast_scan_workers: 2           # 纯扫描页级 OCR 并发数；GPU/DirectML 自动按 1 执行
 
 # ─── 并发处理配置 ───
 concurrency:
@@ -67,3 +105,10 @@ logging:
   level: "DEBUG"                          # 日志级别: DEBUG/INFO/WARNING/ERROR/CRITICAL
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   file: "./test-artifacts/logs/ocr.log"  # 日志文件（设为 null 可仅输出到控制台）
+
+# ─── 生命周期性能统计 ───
+profiling:
+  enabled: false                           # 默认关闭；启用后输出安全 JSON，不包含原文
+  output: "./test-artifacts/logs/ocr-profile.json"
+  include_page_profiles: true              # 输出每页渲染、压缩、排队和 OCR 耗时
+  hash_inputs: true                        # 记录输入 SHA-256，便于复现实验和后续缓存

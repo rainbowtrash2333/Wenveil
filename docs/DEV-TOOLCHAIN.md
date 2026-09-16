@@ -1,6 +1,6 @@
 # 开发工具链（DEV-TOOLCHAIN）
 
-> 版本：V0.6（2026-09-14）｜状态：生效
+> 版本：V0.9（2026-09-17）｜状态：生效
 > 本文档记录 Wenveil（文隐）的安装、编译、测试、调试和 CLI 验收命令。
 
 ## 1. 环境要求
@@ -13,6 +13,8 @@
 | pytest | 当前环境 | 测试依赖；以项目环境实际安装版本为准 |
 | Transformers/PyTorch | 可选 | Qwen 本地训练或 PyTorch 推理时需要；ONNX 部署不需要 |
 | tokenizers/ONNX Runtime | 可选 | ONNX 部署与 CPU/DirectML provider 选择 |
+| Microsoft Office | 可选 | Windows 旧版 `.doc/.xls/.ppt` 转换；需要 Word、Excel、PowerPoint 和 `pywin32` |
+| 7-Zip | 可选 | `.rar/.7z` 及常见归档解压；PATH 中提供 `7z`、`7zz` 或 `7za`，或配置 `file_converter.archive_tool` |
 | Node.js/npm | 20+ | 构建 `desktop/` React + Tauri 前端 |
 | Rust/Cargo | stable | 检查 Tauri 原生壳；发布打包另需配置 Python Sidecar |
 
@@ -20,7 +22,7 @@
 
 ```powershell
 python -m pip install -e .
-python -m compileall -q common desensitize ocr organize training
+python -m compileall -q common desensitize ocr organize training workflow
 ```
 
 Python 包的可安装产物由 `pyproject.toml` 定义，构建目录不入库。桌面开发构建：
@@ -41,7 +43,9 @@ npm --prefix desktop run dev:http -- --host 127.0.0.1 --port 5173
 ```
 
 演示空壳只用于没有 Python 服务时检查页面交互：`npm --prefix desktop run dev:demo`。Tauri 发布采用目录分发：Python Sidecar 与模型目录由专用脚本组装，不生成单一 exe 安装包。
-需要 OCR 转换时额外安装 `python -m pip install -e ".[ocr]"`；DirectML/CUDA 使用对应可选依赖。
+需要 OCR 转换时额外安装 `python -m pip install -e ".[ocr]"`；该 extra 还包含 `extract-msg`，Windows
+旧版 Office COM 需要 `pywin32`。DirectML/CUDA 使用对应可选依赖；RAR/7z 另需系统安装 7-Zip，
+Microsoft Office 旧版文档转换另需本机 Office。
 
 完整离线模型目录发布（不生成单一 exe）：
 
@@ -66,6 +70,7 @@ pytest -q
 python -m desensitize --help
 python -m ocr --help
 python -m organize --help
+python -m workflow --help
 ```
 
 使用安全测试夹具进行完整 CLI 验收时：
@@ -77,6 +82,9 @@ python -m desensitize audit .\test-artifacts\desensitization-outputs\document-<s
 python -m desensitize restore .\test-artifacts\desensitization-outputs\document-<safe-id>.masked.md .\test-artifacts\desensitization-outputs\document-<safe-id>.mapping.enc -o .\test-artifacts\desensitization-outputs\restored.md
 ```
 
+密码为可选项。未设置 `DESENSE_PASSWORD` 且不传 `--password` 时，`mask` 仍会生成不可恢复的
+`masked.md` 和 report，不生成 `mapping.enc`；这种结果不能执行 `restore`。
+
 仓库内的 `tests/fixtures/financial_desensitization_sample.md` 仅用于确定性回归；真实验收仍必须使用临时目录和授权输入，禁止把用户资料写入 Git。
 
 三模块可单独调用，也可按文件契约串联：
@@ -87,23 +95,46 @@ python -m organize .\test-artifacts\ocr-outputs -o .\test-artifacts\organized-ou
 python -m desensitize mask .\test-artifacts\organized-outputs\document-<safe-id>.organized.md --password $env:DESENSE_PASSWORD
 ```
 
+OCR 前置转换配置位于 `config/ocr.yaml` 的 `file_converter` 节：归档外层算第 1 层，默认最多递归
+解压 3 层；默认成员上限为 10,000、累计未压缩体积上限为 2 GiB。`.doc/.xls/.ppt` 会通过隐藏、只读
+Office COM 转成新格式，`.msg` 会提取正文和支持格式附件。可用以下命令检查外部工具是否可见：
+
+```powershell
+Get-Command 7z,7zz,7za -ErrorAction SilentlyContinue
+Get-ChildItem "$env:ProgramFiles\Microsoft Office" -Recurse -File -Include WINWORD.EXE,EXCEL.EXE,POWERPNT.EXE -ErrorAction SilentlyContinue
+```
+
+统一工作流入口会把作业状态写入 SQLite，并将中间 OCR/整理文本放到应用私有 checkpoint；成功作业清理 checkpoint，数据库保留状态、日志路径、产物路径和哈希：
+
+```powershell
+python -m workflow process .\input-a.md .\input-b.pdf -o .\output --password $env:DESENSE_PASSWORD
+python -m workflow status <job-id>
+python -m workflow resume <job-id> --password $env:DESENSE_PASSWORD
+
+# 按一级项目目录批量转换并分别合并为 Markdown
+python skills/project-to-md/scripts/project_to_md.py .\test-artifacts\test_docs
+```
+
 ## 4. 配置、规则与脱敏运行
 
 - 脱敏默认配置：`config/default.yaml`；包内部署副本：`desensitize/config/default.yaml`。
 - OCR 默认配置：`config/ocr.yaml`；OCR 模块代码位于 `ocr/`。
 - 公共机构白名单：`rules/organization_whitelist.txt`；包内副本：`desensitize/rules/organization_whitelist.txt`。
-- 常用运行方式：`python -m desensitize mask <input.md> --password <local-only-password>`。
+- 常用可恢复运行方式：`python -m desensitize mask <input.md> --password <local-only-password>`；省略密码可生成不可恢复的 masked 文件。
 - 输出使用 `document-<safe-id>.<kind>`，输出目录默认是 `test-artifacts/desensitization-outputs/`，该目录已忽略；授权原始输入统一放在 `test-artifacts/desensitization-inputs/`。
 
 ## 5. 调试与失败排查
 
-1. 先执行 `python -m compileall -q common desensitize ocr organize training`，排除语法和导入问题。
+1. 先执行 `python -m compileall -q common desensitize ocr organize training workflow`，排除语法和导入问题。
 2. 再执行与改动相关的 pytest 文件，最后执行 `pytest -q`。
 3. CLI 失败时只保留退出码、类别、行号、哈希和固定摘要；原文、映射明文和密码不得写日志。
 4. 测试日志、审计报告和截图写入 `test-artifacts/`，该目录不入库；桌面浏览器验收脚本也只允许写入该目录。
 5. OCR 原始输入/输出分别使用 `test-artifacts/ocr-inputs/`、`test-artifacts/ocr-outputs/`；整理输出使用
    `test-artifacts/organized-outputs/`；这些目录均不入库。
-6. 恢复失败先检查 mapping 密码、masked 文件是否被改动以及 mapping 中绑定的哈希，不绕过校验。
+6. 项目级批量合并脚本默认将结果写入输入根目录的 `merged/`，将 SQLite、日志和私有 checkpoint
+   写入输入根目录的 `.wenveil/`；旧版 Office、MSG 和归档会先经 `ocr/file_converter.py` 前置处理，
+   其他不支持文件以非零结果提示。
+7. 恢复失败先检查 mapping 密码、masked 文件是否被改动以及 mapping 中绑定的哈希，不绕过校验。
 
 ## 6. 训练入口
 

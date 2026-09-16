@@ -1,14 +1,14 @@
 # AGENTS.md — AI 助手项目指南
 
 > 本文档供 AI 编码助手在本项目中工作时阅读，统一项目背景、约定与工作方式。
-> 版本：V0.4（2026-09-14）｜状态：生效
+> 版本：V0.6（2026-09-17）｜状态：生效
 
 ## 1. 项目简介
 
 **Wenveil（文隐）** 是面向中文 OCR 金融、保险与投资文档的离线文档处理工具，包含三个可独立调用的
 功能模块：`ocr/` 负责文档/图片转 Markdown，`organize/` 负责 OCR 文本确定性整理，
-`desensitize/` 负责可逆脱敏；`desktop/` 提供 Tauri + React 桌面端入口。脱敏系统以多路 Span
-识别、统一冲突解析、短语义 Token 和 AES-GCM 加密映射为核心；模型只能提出候选实体，不能改写原文。
+`desensitize/` 负责脱敏（有密码时可恢复，无密码时不可恢复）；`desktop/` 提供 Tauri + React 桌面端入口。脱敏系统以多路 Span
+识别、统一冲突解析、短语义 Token 和可选 AES-GCM 加密映射为核心；模型只能提出候选实体，不能改写原文。
 任何日志、报告和提交都不得泄露用户原始文档或映射密码。
 
 ## 2. 开工前必读（重要）
@@ -49,9 +49,10 @@ Wenveil/
 │   ├── adr/         # 架构决策记录
 │   └── UI/          # 桌面端 UI 设计与验收
 ├── common/          # 三个功能模块共享的纯确定性工具（文本规整、安全 ID）
-├── ocr/             # 独立 OCR/文档转换模块：Docling + RapidOCR + CLI
+├── ocr/             # 独立 OCR/文档转换模块：前置转换 + Docling + RapidOCR + CLI
 ├── organize/        # 独立 OCR 文本整理模块：Markdown/纯文本规整 + CLI
-├── desensitize/     # 独立可逆脱敏模块：识别、解析、替换、恢复、审计、CLI
+├── desensitize/     # 独立脱敏模块：识别、解析、替换、可选恢复、审计、CLI
+├── workflow/         # 统一处理接口、SQLite 状态、checkpoint、恢复和 CLI
 ├── desktop/         # Tauri 2 + React 桌面端 UI 与 Python Sidecar 适配
 ├── training/        # 离线训练数据、增强、验证与可选 Qwen 训练脚手架
 ├── config/          # 项目默认配置（含 config/ocr.yaml）
@@ -81,7 +82,7 @@ Wenveil/
 ```powershell
 # 安装/构建检查
 python -m pip install -e .
-python -m compileall -q common desensitize ocr organize training
+python -m compileall -q common desensitize ocr organize training workflow
 
 # 单元与集成回归
 pytest -q
@@ -90,6 +91,7 @@ pytest -q
 python -m ocr --help
 python -m organize --help
 python -m desensitize --help
+python -m workflow --help
 ```
 
 桌面端开发与验收：

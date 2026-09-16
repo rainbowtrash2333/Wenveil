@@ -66,7 +66,8 @@ export function mergeFiles(current: SelectedFile[], incoming: SelectedFile[]): S
 }
 
 export function validatePassword(password: string, confirmation: string): string | null {
-  if (!password) return "请输入脱敏恢复密码。";
+  if (!password && !confirmation) return null;
+  if (!password || !confirmation) return "密码可不设置；如需恢复，请同时填写密码和确认密码。";
   if (password.length < 8) return "密码至少需要 8 个字符。";
   if (password !== confirmation) return "两次输入的密码不一致。";
   return null;

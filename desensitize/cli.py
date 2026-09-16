@@ -19,13 +19,28 @@ from .pipeline import Desensitizer
 COMMANDS = {"mask", "restore", "inspect", "benchmark", "audit"}
 
 
-def _password(value: str | None, *, parser: argparse.ArgumentParser) -> str:
+def _configured_password(value: str | None) -> str | None:
     password = value or os.environ.get("DESENSE_PASSWORD")
+    return password or None
+
+
+def _optional_password(value: str | None) -> str | None:
+    """Return a configured password without prompting for irreversible masking."""
+
+    return _configured_password(value)
+
+
+def _password(value: str | None, *, parser: argparse.ArgumentParser) -> str:
+    """Resolve the password required to restore an encrypted mapping."""
+
+    password = _configured_password(value)
     if password:
         return password
     if sys.stdin.isatty():
-        return getpass.getpass("Mapping password: ")
-    parser.error("--password or DESENSE_PASSWORD is required for encrypted mappings")
+        prompted = getpass.getpass("Mapping password: ")
+        if prompted:
+            return prompted
+    parser.error("--password or DESENSE_PASSWORD is required for restore")
     raise AssertionError("argparse.error exits")
 
 
@@ -46,7 +61,10 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("test-artifacts/desensitization-outputs"),
     )
-    mask.add_argument("--password", help="mapping encryption password (or DESENSE_PASSWORD)")
+    mask.add_argument(
+        "--password",
+        help="optional mapping encryption password (or DESENSE_PASSWORD); omit for irreversible masking",
+    )
 
     restore = subparsers.add_parser("restore", help="restore a masked document")
     restore.add_argument("masked", type=Path)
@@ -85,17 +103,31 @@ def _mask(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
     masked_path = args.output / f"{stem}.masked.md"
     mapping_path = args.output / f"{stem}.mapping.enc"
     report_path = args.output / f"{stem}.report.json"
-    password = _password(args.password, parser=parser)
-    normalized_path.write_text(result.normalized_text, encoding="utf-8")
+    password = _optional_password(args.password)
+    reversible = bool(password)
+    report = {
+        **result.report,
+        "reversible": reversible,
+        "mapping_encrypted": reversible,
+    }
     masked_path.write_text(result.masked_text, encoding="utf-8")
-    result.vault.save(mapping_path, password)
-    report_path.write_text(json.dumps(result.report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if reversible:
+        normalized_path.write_text(result.normalized_text, encoding="utf-8")
+        result.vault.save(mapping_path, password)
+    else:
+        # A previous encrypted run may have used the same safe stem.  Do not
+        # leave a stale mapping or raw normalized copy beside an irreversible
+        # result.
+        normalized_path.unlink(missing_ok=True)
+        mapping_path.unlink(missing_ok=True)
+    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({
-        "normalized": str(normalized_path),
+        "normalized": str(normalized_path) if reversible else None,
         "masked": str(masked_path),
-        "mapping": str(mapping_path),
+        "mapping": str(mapping_path) if reversible else None,
         "report": str(report_path),
-        "entities": result.report["entities"],
+        "reversible": reversible,
+        "entities": report["entities"],
     }, ensure_ascii=False, indent=2))
 
 

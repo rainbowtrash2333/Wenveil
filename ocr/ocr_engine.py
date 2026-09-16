@@ -26,6 +26,7 @@ from docling.datamodel.pipeline_options import OcrOptions
 from docling.models.base_ocr_model import BaseOcrModel
 
 from ocr.rapid_ocr import LocalOcrEngine
+from ocr.pdf_preflight import meaningful_char_count
 
 _log = logging.getLogger("wenveil.ocr")
 
@@ -42,10 +43,16 @@ class RapidOcrOptions(OcrOptions):
     kind: ClassVar[Literal["rapidocr"]] = "rapidocr"
 
     lang: List[str] = ["ch"]
+    use_angle_cls: bool = True
     use_dml: bool = False
     use_gpu: bool = False
     model_dir: Optional[str] = None
     image_scale: float = 2.0   # OCR 前页面图像放大倍率（越大精度越高、耗时越长）
+    text_score: float = 0.5
+    box_score: float = 0.3
+    min_valid_text_chars: int = 64
+    intra_op_num_threads: int = -1
+    inter_op_num_threads: int = -1
 
 
 class RapidOcrModel(BaseOcrModel):
@@ -94,10 +101,14 @@ class RapidOcrModel(BaseOcrModel):
             ocr_config = OcrConfig(
                 enabled=True,
                 lang=options.lang,
-                use_angle_cls=True,
+                use_angle_cls=options.use_angle_cls,
                 use_dml=options.use_dml,
                 use_gpu=options.use_gpu,
                 model_dir=options.model_dir,
+                text_score=options.text_score,
+                box_score=options.box_score,
+                intra_op_num_threads=options.intra_op_num_threads,
+                inter_op_num_threads=options.inter_op_num_threads,
             )
             self.ocr_engine = LocalOcrEngine(ocr_config)
             _log.info("RapidOCR 本地引擎已初始化（语言: %s）", options.lang)
@@ -139,6 +150,16 @@ class RapidOcrModel(BaseOcrModel):
         for page in page_batch:
             assert page._backend is not None
             if not page._backend.is_valid():
+                yield page
+                continue
+
+            # 已有足够完整的文本层时，直接保留解析结果，避免重复 OCR。
+            # 该判断必须先于 get_ocr_rects，避免为纯文本页构造位图分析栅格。
+            if not needs_ocr(
+                page,
+                min_valid_text_chars=self.options.min_valid_text_chars,
+                bitmap_area_threshold=self.options.bitmap_area_threshold,
+            ):
                 yield page
                 continue
 
@@ -203,6 +224,46 @@ class RapidOcrModel(BaseOcrModel):
             # 后处理：过滤与已有程序化单元格重叠的 OCR 单元格，合并并排序
             self.post_process_cells(all_ocr_cells, page)
             yield page
+
+
+def needs_ocr(
+    page: Page,
+    *,
+    min_valid_text_chars: int = 64,
+    bitmap_area_threshold: float = 0.05,
+) -> bool:
+    """判断 Docling 已解析的页面是否仍需要 OCR。
+
+    页面级决策顺序为：先检查有效文本层，再检查图片覆盖率。这样既能跳过
+    原生文本页和完整隐藏文本层，也不会把页码、水印或小图标当作可复用文本。
+    """
+
+    backend = getattr(page, "_backend", None)
+    if backend is None or not backend.is_valid():
+        return False
+
+    try:
+        cells = page.cells or []
+    except Exception:
+        cells = []
+    text_chars = sum(
+        meaningful_char_count(cell.text)
+        for cell in cells
+        if isinstance(getattr(cell, "text", None), str)
+    )
+    if text_chars >= max(1, min_valid_text_chars):
+        return False
+
+    bitmap_rects = backend.get_bitmap_rects()
+    if not bitmap_rects:
+        return False
+
+    size = getattr(page, "size", None)
+    if size is None:
+        return False
+    page_area = max(float(size.width) * float(size.height), 1.0)
+    bitmap_area = sum(max(0.0, rect.area()) for rect in bitmap_rects)
+    return bitmap_area / page_area > max(0.0, bitmap_area_threshold)
 
 
 def register_rapidocr_engine() -> None:

@@ -1,6 +1,6 @@
 # 路线图（ROADMAP）
 
-> 版本：V0.5（2026-09-14）｜状态：生效
+> 版本：V0.8（2026-09-17）｜状态：生效
 > 本文档定义 Wenveil（文隐）的阶段目标与里程碑；当前能力清单见
 > [APP-VERSION.md](./APP-VERSION.md)。
 
@@ -19,6 +19,7 @@
 
 - [x] Normalizer、规则/词典识别器、统一 Resolver 和一次性替换。
 - [x] AES-GCM mapping、masked 哈希绑定、密码错误/篡改/Token 缺失失败。
+- [x] 支持无密码不可逆脱敏；该模式不生成 mapping，需恢复时重新处理原文并设置密码。
 - [x] Markdown 结构与残留 PII 审计。
 
 ### 阶段 2：金融主体关系与交付安全（已完成）
@@ -41,10 +42,16 @@
 - [x] 提取独立 OCR 文本整理模块，提供 `organize` CLI；三个功能模块可单独调用。
 - [x] 建立 Tauri + React 桌面开发 UI，覆盖处理、恢复、进度、结果和设置；通过 JSON Lines Sidecar 复用 Python 模块。
 - [ ] 完成离线发布包签名和升级/回滚演练；PyInstaller onedir sidecar 与模型目录已可组装为目录分发。
-- [ ] 批量目录处理、任务级安全 ID 和可观测计数。
-- [ ] 建立不同文档规模的吞吐/内存基线，评估 ONNX 或量化部署。
+- [x] 批量目录处理、任务级安全 ID 和可观测计数；`skills/project-to-md` 已支持按项目生成 merged Markdown，状态进入 SQLite。
+- [x] 建立三类 PDF 的吞吐/阶段基线，并完成页级预检与纯扫描快速 OCR。
+- [ ] 建立页级 OCR 缓存，避免同一 PDF 或未变化页重复 OCR。
+- [ ] 在实际 DirectML/CUDA provider 上完成硬件加速基准和内存回归。
+- [ ] 评估 ONNX 或量化部署。
 - [x] 完成 Qwen3.5 ONNX 导出、PyTorch/ORT parity 和 DirectML 优先/CPU 回退适配；固定长度图的性能基线仍待建立。
 - [ ] 增加离线交付包、配置版本锁定和回滚演练。
+- [x] 新增独立统一工作流服务，统一 OCR、整理、合并、脱敏、审计、恢复和 SQLite 作业状态；UI 重构和异步调度后续进行。
+- [x] 完成统一工作流阶段故障恢复、checkpoint 篡改检测、输入指纹保护和作业租约互斥验收。
+- [x] 增加 OCR 文件前置转换：旧版 Office、MSG、ZIP/RAR/7z 和最多三层递归归档展开。
 
 ## 3. 决策记录
 
@@ -54,6 +61,8 @@
 | [ADR-0002](./adr/0002-independent-processing-modules.md) | OCR、文本整理与脱敏模块独立化 | 已接受 |
 | [ADR-0003](./adr/0003-tauri-desktop-ui.md) | Tauri 桌面端与 Python Sidecar | 已接受 |
 | [ADR-0004](./adr/0004-qwen35-token-classification-onnx.md) | Qwen3.5 Token Classification 与 ONNX 离线部署 | 已接受 |
+| [ADR-0005](./adr/0005-unified-workflow-sqlite-state.md) | 统一工作流服务与 SQLite 作业状态库 | 已接受 |
+| [ADR-0006](./adr/0006-file-conversion-preprocessing.md) | OCR 前置文件转换与受控归档展开 | 已接受 |
 
 > 新增重大技术路线时，在 `docs/adr/` 建立递增编号的 ADR，并在本表登记。
 
@@ -66,3 +75,9 @@
 | 2026-09-12 | 阶段 4 | 接入独立 OCR 转换和 OCR 文本整理模块，建立三模块文件契约 |
 | 2026-09-12 | 阶段 4 | 建立 Tauri + React 桌面开发 UI、JSON Lines Sidecar 和浏览器 HTTP 验收适配器；发布捆绑待后续 |
 | 2026-09-14 | 阶段 3–4 | 完成 Qwen3.5 本地下载、正式合成训练/best、独立 test 与 subset 指标、ONNX parity、CPU 回退及现有 Resolver/Mapping/restore 实测；授权语料与性能基线待后续 |
+| 2026-09-16 | 阶段 4 | 完成 PDF 页级预检、纯扫描快速 OCR、CPU 页级并发、48 页安全性能基准与优化报告；页级缓存和真实 GPU provider 待后续 |
+| 2026-09-16 | 阶段 1–4 | 增加可选密码：无密码生成不可恢复 masked 文件，有密码保持加密 mapping 与恢复链路 |
+| 2026-09-16 | 阶段 4 | 完成 `workflow/` 统一入口、SQLite 状态/事件/产物登记、私有 checkpoint 恢复和 Sidecar 迁移；UI 暂不改造 |
+| 2026-09-17 | 阶段 4 | 完成 OCR/整理/合并/脱敏/审计阶段故障注入恢复、checkpoint 完整性和作业租约验收；输入文件变化会被安全拒绝 |
+| 2026-09-17 | 阶段 4 | 增加旧版 Office/MSG 转换、ZIP/RAR/7z 受控解压和三层嵌套归档安全边界 |
+| 2026-09-17 | 阶段 4 | 新增 `skills/project-to-md` 批量脚本：按一级项目递归处理受支持文件，分别生成 merged Markdown，并保留 SQLite 状态 |

@@ -1,6 +1,6 @@
 # Wenveil（文隐）文档索引（INDEX）
 
-> 版本：V0.6（2026-09-14）｜状态：生效
+> 版本：V1.0（2026-09-17）｜状态：生效
 > 本文档是 `docs/` 下全部项目文档的唯一入口。AI 助手开始任务前先阅读本文档，再按任务
 > 场景阅读对应文档。
 
@@ -9,8 +9,12 @@
 | 任务场景 | 必读 | 补充 |
 |----------|------|------|
 | 了解项目全貌、当前阶段 | [../AGENTS.md](../AGENTS.md) + [ROADMAP.md](./ROADMAP.md) | [APP-VERSION.md](./APP-VERSION.md) |
-| 架构分层、依赖规则、数据流 | [ARCHITECTURE.md](./ARCHITECTURE.md) + [MODULES.md](./MODULES.md) | [ADR-0001](./adr/0001-hybrid-reversible-desensitization.md)、[ADR-0004](./adr/0004-qwen35-token-classification-onnx.md) |
+| 向 Web GPT 提供项目背景 | [WEB-GPT-PROMPT.md](./WEB-GPT-PROMPT.md) | 按任务阅读对应代码或专项文档 |
+| 架构分层、依赖规则、数据流 | [ARCHITECTURE.md](./ARCHITECTURE.md) + [MODULES.md](./MODULES.md) | [ADR-0001](./adr/0001-hybrid-reversible-desensitization.md)、[ADR-0004](./adr/0004-qwen35-token-classification-onnx.md)、[ADR-0006](./adr/0006-file-conversion-preprocessing.md) |
 | OCR/文本整理/脱敏模块调用 | [ARCHITECTURE.md](./ARCHITECTURE.md) + [DEV-TOOLCHAIN.md](./DEV-TOOLCHAIN.md) | [../README.md](../README.md) |
+| 统一工作流、SQLite 状态库、断点恢复 | [UNIFIED_WORKFLOW_SQLITE_IMPLEMENTATION_PLAN.md](./UNIFIED_WORKFLOW_SQLITE_IMPLEMENTATION_PLAN.md) | [ADR-0005](./adr/0005-unified-workflow-sqlite-state.md) |
+| OCR 性能路径与基准 | [../OCR_OPTIMIZATION_REPORT.md](../OCR_OPTIMIZATION_REPORT.md) | `ocr/pdf_preflight.py`、`ocr/pdf_fast.py` |
+| OCR 外层生命周期 Bug 审计 | [../OCR_BUG_AUDIT_REPORT.md](../OCR_BUG_AUDIT_REPORT.md) | `ocr/pipeline.py`、`ocr/profiling.py` |
 | 修改脱敏识别、白名单或占位符 | [ocr_desensitization_implementation_plan.md](./ocr_desensitization_implementation_plan.md) | [ARCHITECTURE.md](./ARCHITECTURE.md)、[MODULES.md](./MODULES.md) |
 | 编写/评审代码与测试 | [DEVELOPMENT-GUIDELINES.md](./DEVELOPMENT-GUIDELINES.md) | [MODULES.md](./MODULES.md) |
 | 构建/安装/调试 | [DEV-TOOLCHAIN.md](./DEV-TOOLCHAIN.md) | [../README.md](../README.md) |
@@ -26,7 +30,10 @@
 | 文档 | 作用 | 何时阅读 |
 |------|------|----------|
 | [DOCUMENTATION-GUIDE.md](./DOCUMENTATION-GUIDE.md) | 文档组织、写作、同步和冲突处理规范 | 新增/修改/删除文档前 |
+| [WEB-GPT-PROMPT.md](./WEB-GPT-PROMPT.md) | 可直接提供给 Web GPT 的项目背景、技术路线、结构和协作约束 | 外部 GPT 协助项目任务时 |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | 分层、核心概念、数据流和安全边界 | 架构或跨模块改动 |
+| [../OCR_OPTIMIZATION_REPORT.md](../OCR_OPTIMIZATION_REPORT.md) | OCR 技术路径、性能基线、优化结果与后续路线 | OCR 性能分析或参数调整 |
+| [../OCR_BUG_AUDIT_REPORT.md](../OCR_BUG_AUDIT_REPORT.md) | OCR 外层线程生命周期异常的证据、埋点和判定规则 | OCR 长尾 Bug 审计 |
 | [MODULES.md](./MODULES.md) | 模块职责、边界、依赖和测试目标 | 新增代码或调整模块 |
 | [DEVELOPMENT-GUIDELINES.md](./DEVELOPMENT-GUIDELINES.md) | Python 开发、测试和质量门禁 | 修改代码或测试 |
 | [GIT-GUIDELINES.md](./GIT-GUIDELINES.md) | 分支、提交和禁止入库内容 | 任何提交前 |
@@ -35,15 +42,18 @@
 | [ROADMAP.md](./ROADMAP.md) | 阶段目标、里程碑和 ADR 索引 | 规划或变更路线 |
 | [PUBLIC-RELEASE-CHECKLIST.md](./PUBLIC-RELEASE-CHECKLIST.md) | GitHub 公开发布的数据边界与历史审计 | 首次公开或重新发布 |
 | [ocr_desensitization_implementation_plan.md](./ocr_desensitization_implementation_plan.md) | 脱敏设计规格、测试要求与验收标准（不含已由其他文档覆盖的架构与命令） | 脱敏策略、识别规则和验收标准改动 |
+| [UNIFIED_WORKFLOW_SQLITE_IMPLEMENTATION_PLAN.md](./UNIFIED_WORKFLOW_SQLITE_IMPLEMENTATION_PLAN.md) | 统一 OCR、整理、合并、脱敏、恢复接口与 SQLite 作业状态的实施方案 | 统一工作流、断点恢复和作业记录设计 |
 | [UI/UI设计方案.md](./UI/UI设计方案.md) | Wenveil 桌面端页面、流程和交互设计 | 桌面端 UI 实现与审查 |
 
 ## 3. 专项文档与目录
 
 - [../skills/ocr-desensitization/SKILL.md](../skills/ocr-desensitization/SKILL.md)：AI 调用脱敏、审计、恢复和敏感信息输出约束。
+- [../skills/project-to-md/SKILL.md](../skills/project-to-md/SKILL.md)：按项目递归转换文件（含旧版 Office、MSG 和归档前置处理）并生成 merged Markdown。
 - [../ocr/README.md](../ocr/README.md)：OCR 文档转换模块的安装、配置和 CLI。
 - [../organize/README.md](../organize/README.md)：OCR 文本整理模块的输入、输出和 CLI。
 - [../training/README.md](../training/README.md)：金融领域合成数据、固定外部 split 适配、标签校验、OCR 增强和可选 Qwen 训练入口。
 - [adr/0004-qwen35-token-classification-onnx.md](./adr/0004-qwen35-token-classification-onnx.md)：Qwen3.5 token classification、best checkpoint、ONNX/DirectML/CPU 离线部署边界。
+- [adr/0006-file-conversion-preprocessing.md](./adr/0006-file-conversion-preprocessing.md)：OCR 前置文件转换、Office/MSG 适配和三层归档展开安全边界。
 - [adr/](./adr/)：已接受的架构决策记录。
 
 桌面端 UI 设计与实现位于 `docs/UI/` 和 `desktop/`；桌面端技术路线与 Python Sidecar 边界见
@@ -52,7 +62,9 @@
 ## 4. 推荐阅读顺序
 
 新接触项目：`AGENTS.md` → `docs/index.md` → `ARCHITECTURE.md` → `MODULES.md` →
-`APP-VERSION.md` → `ROADMAP.md`；进行桌面端 UI 工作时再读 `UI/UI设计方案.md` 和
+`APP-VERSION.md` → `ROADMAP.md`；进行统一工作流设计时再读
+`UNIFIED_WORKFLOW_SQLITE_IMPLEMENTATION_PLAN.md` 和 `adr/0005-unified-workflow-sqlite-state.md`；
+进行桌面端 UI 工作时再读 `UI/UI设计方案.md` 和
 `adr/0003-tauri-desktop-ui.md`。
 
 修改脱敏逻辑：再读 `ocr_desensitization_implementation_plan.md`、项目 skill、相关规则和测试。

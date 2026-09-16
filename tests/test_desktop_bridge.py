@@ -45,6 +45,39 @@ def test_sidecar_processes_and_restores_a_text_file(tmp_path: Path) -> None:
     assert "13800138000" in restored_text
 
 
+def test_sidecar_masks_without_password_without_writing_mapping(tmp_path: Path) -> None:
+    source = tmp_path / "synthetic-note.txt"
+    source.write_text("联系人：张三，电话：13800138000\n", encoding="utf-8")
+    output = tmp_path / "output"
+
+    result = handle_request(
+        {
+            "op": "process",
+            "files": [{"id": "fixture-irreversible", "name": source.name, "path": str(source)}],
+            "steps": {"ocr": False, "organize": True, "mask": True, "audit": True},
+            "entities": ["PERSON", "PHONE"],
+            "outputDir": str(output),
+        }
+    )
+
+    item = result["files"][0]
+    assert item["status"] == "done"
+    assert item["reversible"] is False
+    assert any(name.endswith(".masked.md") for name in item["outputNames"])
+    assert any(name.endswith(".report.json") for name in item["outputNames"])
+    assert not any(name.endswith(".mapping.enc") for name in item["outputNames"])
+    assert not list(output.glob("*.mapping.enc"))
+    assert not list(output.glob("*.normalized.md"))
+    masked = next(output / name for name in item["outputNames"] if name.endswith(".masked.md"))
+    masked_text = masked.read_text(encoding="utf-8")
+    assert "张三" not in masked_text
+    assert "13800138000" not in masked_text
+    report = next(output / name for name in item["outputNames"] if name.endswith(".report.json"))
+    report_data = json.loads(report.read_text(encoding="utf-8"))
+    assert report_data["reversible"] is False
+    assert report_data["mapping_encrypted"] is False
+
+
 def test_sidecar_health_is_safe_and_structured() -> None:
     response = handle_request({"op": "health"})
     assert response == {"status": "ready", "capabilities": ["process", "restore"]}
@@ -122,3 +155,24 @@ def test_sidecar_rejects_invalid_inline_content_safely(tmp_path: Path) -> None:
     assert item["message"] == "输入文件内容无效"
     assert any(event["event"]["status"] == "error" for event in events)
     assert "not-base64" not in json.dumps(result)
+
+
+def test_sidecar_rejects_unsafe_inline_extensions(tmp_path: Path) -> None:
+    content = base64.b64encode(b"safe text").decode("ascii")
+
+    result = handle_request(
+        {
+            "op": "process",
+            "files": [{
+                "id": "invalid-extension",
+                "name": "input.txt",
+                "extension": "../../outside.txt",
+                "contentBase64": content,
+            }],
+            "steps": {"ocr": False, "organize": True, "mask": False, "audit": False},
+            "outputDir": str(tmp_path / "output"),
+        }
+    )
+
+    assert result["files"][0]["status"] == "error"
+    assert result["files"][0]["message"] == "输入文件类型无效"

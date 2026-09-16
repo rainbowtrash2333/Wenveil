@@ -28,6 +28,7 @@ export type ProcessResult = {
     status: "done" | "attention" | "error";
     outputNames: string[];
     auditIssues: Array<{ line: number; category: string; summary: string }>;
+    reversible: boolean;
     message?: string;
   }>;
 };
@@ -91,7 +92,7 @@ class DemoAdapter implements WenveilBridge {
         onProgress({ fileId: file.id, fileName: file.name, step, status: "done", progress: 1 });
         if (index === enabledSteps.length - 1) continue;
       }
-      results.push({ fileId: file.id, status: "done", outputNames: [`document-${file.id}.masked.md`], auditIssues: [] });
+      results.push({ fileId: file.id, status: "done", outputNames: [`document-${file.id}.masked.md`], auditIssues: [], reversible: Boolean(request.password) });
       onProgress({ fileId: file.id, fileName: file.name, status: "done", progress: 1 });
     }
     return { files: results };
