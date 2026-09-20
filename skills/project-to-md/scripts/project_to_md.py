@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -36,8 +37,9 @@ DEFAULT_IGNORED_DIRS = frozenset({"merged", ".wenveil"})
 
 @dataclass(frozen=True, slots=True)
 class ProjectResult:
-    """Safe, serializable summary for one project."""
+    """Serializable summary for one project."""
 
+    project_name: str
     project_id: str
     status: str
     job_id: str | None
@@ -46,9 +48,8 @@ class ProjectResult:
     output_path: str | None = None
     error_code: str | None = None
 
-    def as_dict(self) -> dict[str, object]:
-        return {
-            "projectId": self.project_id,
+    def as_dict(self, *, preserve_names: bool = False) -> dict[str, object]:
+        result = {
             "status": self.status,
             "jobId": self.job_id,
             "fileCount": self.file_count,
@@ -56,6 +57,11 @@ class ProjectResult:
             "outputPath": self.output_path,
             "errorCode": self.error_code,
         }
+        if preserve_names:
+            result["projectName"] = self.project_name
+        else:
+            result["projectId"] = self.project_id
+        return result
 
 
 def _is_hidden_or_ignored(path: Path, project_root: Path) -> bool:
@@ -105,7 +111,38 @@ def discover_projects(root: Path) -> list[Path]:
     ]
 
 
-def _safe_output_path(output_dir: Path, project_root: Path) -> Path:
+def _job_records_for_output(db_path: Path, output_name: str) -> list[tuple[str, str]]:
+    """Return matching workflow jobs without reading document content."""
+
+    if not db_path.is_file():
+        return []
+    try:
+        with sqlite3.connect(db_path, timeout=0.2) as connection:
+            rows = connection.execute(
+                "SELECT job_id, status, request_json FROM workflow_jobs "
+                "WHERE operation = 'process' ORDER BY created_at DESC"
+            ).fetchall()
+    except sqlite3.Error:
+        return []
+    matches: list[tuple[str, str]] = []
+    for job_id, status, request_json in rows:
+        try:
+            request = json.loads(request_json or "{}")
+        except json.JSONDecodeError:
+            continue
+        if request.get("output_name") == output_name:
+            matches.append((job_id, status))
+    return matches
+
+
+def _safe_output_path(
+    output_dir: Path,
+    project_root: Path,
+    *,
+    preserve_names: bool = False,
+) -> Path:
+    if preserve_names:
+        return output_dir / f"{project_root.name}.merged.md"
     return output_dir / f"document-{safe_id(project_root.name)}.merged.md"
 
 
@@ -121,8 +158,9 @@ def process_root(
     allow_unsupported: bool = False,
     device: str = "auto",
     ocr_mode: str = "auto",
+    preserve_names: bool = False,
 ) -> list[ProjectResult]:
-    """Process all project directories and return safe per-project summaries."""
+    """Process all project directories and return per-project summaries."""
 
     input_root = Path(root).expanduser().resolve()
     if not input_root.is_dir():
@@ -143,17 +181,25 @@ def process_root(
     ) as service:
         for project_root in projects:
             files, unsupported_count = collect_project_files(project_root, use_ocr=use_ocr)
-            output_path = _safe_output_path(resolved_output, project_root)
+            output_path = _safe_output_path(
+                resolved_output,
+                project_root,
+                preserve_names=preserve_names,
+            )
             project_id = safe_id(project_root.name)
+            matching_jobs = _job_records_for_output(resolved_db, output_path.name)
 
             if not files:
+                output_path.write_text(f"# {project_root.name}\n", encoding="utf-8")
                 results.append(
                     ProjectResult(
+                        project_name=project_root.name,
                         project_id=project_id,
-                        status="empty" if not unsupported_count else "unsupported",
+                        status="succeeded" if not unsupported_count else "unsupported",
                         job_id=None,
                         file_count=0,
                         unsupported_count=unsupported_count,
+                        output_path=str(output_path),
                         error_code="input_empty" if not unsupported_count else "unsupported_input",
                     )
                 )
@@ -162,6 +208,7 @@ def process_root(
             if unsupported_count and not allow_unsupported:
                 results.append(
                     ProjectResult(
+                        project_name=project_root.name,
                         project_id=project_id,
                         status="unsupported",
                         job_id=None,
@@ -172,9 +219,51 @@ def process_root(
                 )
                 continue
 
+            if resume and any(status == "succeeded" for _, status in matching_jobs):
+                results.append(
+                    ProjectResult(
+                        project_name=project_root.name,
+                        project_id=project_id,
+                        status="skipped",
+                        job_id=None,
+                        file_count=len(files),
+                        unsupported_count=unsupported_count,
+                        output_path=str(output_path) if output_path.is_file() else None,
+                    )
+                )
+                continue
+
+            resumable_job = next(
+                (
+                    job_id
+                    for job_id, status in matching_jobs
+                    if status in {"running", "queued", "interrupted"}
+                ),
+                None,
+            )
+            if resume and resumable_job is not None:
+                snapshot = service.resume(resumable_job)
+                status = snapshot.status.value
+                if unsupported_count and status in {"succeeded", "attention"}:
+                    status = "partial"
+                results.append(
+                    ProjectResult(
+                        project_name=project_root.name,
+                        project_id=project_id,
+                        status=status,
+                        job_id=snapshot.job_id,
+                        file_count=len(files),
+                        unsupported_count=unsupported_count,
+                        output_path=str(output_path) if output_path.is_file() else None,
+                        error_code=snapshot.last_error_code,
+                    )
+                )
+                continue
+
             if resume and output_path.is_file():
                 results.append(
                     ProjectResult(
+                        project_name=project_root.name,
                         project_id=project_id,
                         status="skipped" if not unsupported_count else "partial",
                         job_id=None,
@@ -200,12 +289,14 @@ def process_root(
                         ),
                         ocr_mode=ocr_mode,
                         device=device,
+                        preserve_names=preserve_names,
                         allow_partial=False,
                     )
                 )
             except (WorkflowError, ValueError, FileNotFoundError, OSError) as error:
                 results.append(
                     ProjectResult(
+                        project_name=project_root.name,
                         project_id=project_id,
                         status="failed",
                         job_id=None,
@@ -221,6 +312,7 @@ def process_root(
                 status = "partial"
             results.append(
                 ProjectResult(
+                    project_name=project_root.name,
                     project_id=project_id,
                     status=status,
                     job_id=snapshot.job_id,
@@ -252,6 +344,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-organize", action="store_true", help="跳过文本整理")
     parser.add_argument("--ocr-mode", choices=("auto", "fast", "enhanced"), default="auto")
     parser.add_argument("--device", choices=("auto", "cpu", "gpu"), default="auto")
+    parser.add_argument(
+        "--preserve-names",
+        action="store_true",
+        help="使用项目原名作为 merged 文件名，并在合并内容中保留输入文件原名",
+    )
     return parser
 
 
@@ -269,6 +366,7 @@ def main(argv: Iterable[str] | None = None) -> int:
             allow_unsupported=args.allow_unsupported,
             device=args.device,
             ocr_mode=args.ocr_mode,
+            preserve_names=args.preserve_names,
         )
     except (FileNotFoundError, NotADirectoryError, ValueError, OSError) as error:
         print(json.dumps({"error": type(error).__name__}, ensure_ascii=False), file=sys.stderr)
@@ -281,7 +379,7 @@ def main(argv: Iterable[str] | None = None) -> int:
             item.status in {"succeeded", "skipped"} and item.unsupported_count == 0
             for item in results
         ),
-        "results": [item.as_dict() for item in results],
+        "results": [item.as_dict(preserve_names=args.preserve_names) for item in results],
     }
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return 0 if results and all(

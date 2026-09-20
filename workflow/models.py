@@ -88,6 +88,7 @@ class ProcessRequest:
     retain_intermediate: bool = False
     allow_partial: bool = False
     output_name: str | None = None
+    preserve_names: bool = False
 
 
 @dataclass(frozen=True, slots=True)

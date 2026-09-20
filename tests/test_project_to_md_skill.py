@@ -92,3 +92,39 @@ def test_allow_unsupported_marks_project_partial_even_when_supported_files_finis
 
     assert results[0].status == "partial"
     assert results[0].output_path is not None
+
+
+def test_process_root_can_preserve_project_and_input_names(tmp_path: Path) -> None:
+    root = tmp_path / "test_docs"
+    project = root / "项目甲"
+    nested = project / "nested"
+    nested.mkdir(parents=True)
+    (project / "原始文件 A.txt").write_text("A text", encoding="utf-8")
+    (nested / "资料.md").write_text("B text", encoding="utf-8")
+
+    results = project_to_md.process_root(root, use_ocr=False, preserve_names=True)
+
+    assert results[0].project_name == "项目甲"
+    output = root / "merged" / "项目甲.merged.md"
+    assert output.is_file()
+    merged_text = output.read_text(encoding="utf-8")
+    assert "# 项目甲" in merged_text
+    assert "# ---- 原始文件 A.txt ----" in merged_text
+    assert "# ---- 资料.md ----" in merged_text
+    assert "document-" not in merged_text
+    payload = results[0].as_dict(preserve_names=True)
+    assert payload["projectName"] == "项目甲"
+    assert "projectId" not in payload
+
+
+def test_process_root_creates_named_markdown_for_empty_project(tmp_path: Path) -> None:
+    root = tmp_path / "test_docs"
+    project = root / "空项目"
+    project.mkdir(parents=True)
+
+    results = project_to_md.process_root(root, use_ocr=False, preserve_names=True)
+
+    output = root / "merged" / "空项目.merged.md"
+    assert results[0].status == "succeeded"
+    assert results[0].output_path == str(output)
+    assert output.read_text(encoding="utf-8") == "# 空项目\n"

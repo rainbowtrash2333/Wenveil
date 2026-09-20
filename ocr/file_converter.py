@@ -85,6 +85,12 @@ class _ListedArchiveEntry:
     is_link: bool
 
 
+@dataclass(frozen=True)
+class _MessageAttachment:
+    path: Path
+    display_name: str
+
+
 def _is_within(path: Path, root: Path) -> bool:
     """判断解析后的路径是否仍位于指定根目录内。"""
 
@@ -129,6 +135,28 @@ def _safe_extension(filename: object) -> str:
     if not suffix[1:].replace("-", "").isalnum():
         return ""
     return suffix
+
+
+def _preserved_attachment_name(
+    filename: object,
+    index: int,
+    suffix: str,
+) -> str:
+    """在保留名模式下生成可落盘、仍接近原名的附件文件名。"""
+
+    value = str(filename or "").replace("\\", "/")
+    name = PurePosixPath(value).name
+    name = "".join(
+        "_"
+        if char in '<>:"/\\|?*' or ord(char) < 32
+        else char
+        for char in name
+    ).strip(" .")
+    if not name or name in {".", ".."}:
+        name = f"attachment-{index}"
+    if not Path(name).suffix and suffix:
+        name += suffix
+    return name
 
 
 class ArchiveExtractor:
@@ -551,10 +579,12 @@ class FileConverter:
         *,
         archive_extractor: ArchiveExtractor | None = None,
         office_converter: OfficeConverter | None = None,
+        preserve_names: bool = False,
     ):
         self.config = config or FileConverterConfig()
         self.archive_extractor = archive_extractor or ArchiveExtractor(self.config)
         self.office_converter = office_converter or OfficeConverter(self.config)
+        self.preserve_names = preserve_names
 
     def convert(
         self,
@@ -662,12 +692,21 @@ class FileConverter:
             )
         )
         self.archive_extractor.extract(source, extraction_dir, budget)
-        parts: list[str] = [f"## 归档内容 {safe_id(logical_key)}", ""]
+        if self.preserve_names:
+            archive_title = Path(logical_key).name
+            parts: list[str] = [f"## 归档内容 {archive_title}", ""]
+        else:
+            parts = [f"## 归档内容 {safe_id(logical_key)}", ""]
         converted_count = 0
         for index, child in enumerate(self._iter_files(extraction_dir), start=1):
             if child.suffix.lower() not in SUPPORTED_FILE_EXTENSION_SET:
                 continue
-            child_key = f"{logical_key}/item-{index}{child.suffix.lower()}"
+            child_name = child.relative_to(extraction_dir).as_posix()
+            child_key = (
+                f"{logical_key}/{child_name}"
+                if self.preserve_names
+                else f"{logical_key}/item-{index}{child.suffix.lower()}"
+            )
             try:
                 content = self._convert_path(
                     child,
@@ -690,8 +729,9 @@ class FileConverter:
             if not content or not content.strip():
                 continue
             converted_count += 1
+            child_title = child_name if self.preserve_names else safe_id(child_key)
             parts.extend([
-                f"### 归档文件 {converted_count} ({safe_id(child_key)})",
+                f"### 归档文件 {converted_count} ({child_title})",
                 "",
                 content.strip(),
                 "",
@@ -730,13 +770,17 @@ class FileConverter:
 
         parts = [convert_supported(message_path).strip()]
         for index, attachment in enumerate(attachments, start=1):
-            extension = attachment.suffix.lower()
+            extension = attachment.path.suffix.lower()
             if extension not in SUPPORTED_FILE_EXTENSION_SET:
                 continue
-            attachment_key = f"{logical_key}/attachment-{index}{extension}"
+            attachment_key = (
+                f"{logical_key}/{attachment.display_name}"
+                if self.preserve_names
+                else f"{logical_key}/attachment-{index}{extension}"
+            )
             try:
                 content = self._convert_path(
-                    attachment,
+                    attachment.path,
                     workspace,
                     archive_depth=archive_depth,
                     container_depth=container_depth + 1,
@@ -754,14 +798,23 @@ class FileConverter:
                 )
                 content = "> *[邮件附件转换失败，已跳过]*\n"
             if content and content.strip():
+                attachment_title = (
+                    attachment.display_name
+                    if self.preserve_names
+                    else safe_id(attachment_key)
+                )
                 parts.extend([
-                    f"### 邮件附件 {index} ({safe_id(attachment_key)})",
+                    f"### 邮件附件 {index} ({attachment_title})",
                     "",
                     content.strip(),
                 ])
         return "\n\n".join(part for part in parts if part)
 
-    def _extract_msg(self, source: Path, message_dir: Path) -> tuple[Path, list[Path]]:
+    def _extract_msg(
+        self,
+        source: Path,
+        message_dir: Path,
+    ) -> tuple[Path, list[_MessageAttachment]]:
         try:
             import extract_msg
         except ImportError:
@@ -817,16 +870,27 @@ class FileConverter:
         return destination
 
     @staticmethod
-    def _save_extract_msg_attachments(message: object, directory: Path) -> list[Path]:
+    def _save_extract_msg_attachments(
+        message: object,
+        directory: Path,
+    ) -> list[_MessageAttachment]:
         if not getattr(message, "attachments", None):
             return []
         directory.mkdir(parents=True, exist_ok=True)
-        saved: list[Path] = []
+        saved: list[_MessageAttachment] = []
         for index, attachment in enumerate(list(message.attachments), start=1):
-            suffix = _safe_extension(
+            original_name = (
                 _optional_attribute(attachment, "longFilename")
                 or _optional_attribute(attachment, "shortFilename")
                 or _optional_attribute(attachment, "name")
+            )
+            suffix = _safe_extension(
+                original_name
+            )
+            display_name = _preserved_attachment_name(
+                original_name,
+                index,
+                suffix,
             )
             target = directory / f"attachment-{index}{suffix}"
             try:
@@ -839,14 +903,14 @@ class FileConverter:
                 logger.warning("MSG 附件提取失败 attachment=%d", index)
                 continue
             if target.is_file():
-                saved.append(target)
+                saved.append(_MessageAttachment(target, display_name))
         return saved
 
     def _extract_msg_with_outlook(
         self,
         source: Path,
         message_dir: Path,
-    ) -> tuple[Path, list[Path]]:
+    ) -> tuple[Path, list[_MessageAttachment]]:
         if os.name != "nt":
             raise MessageConversionError("MSG 提取需要 extract-msg 或 Windows Outlook")
         try:
@@ -881,7 +945,8 @@ class FileConverter:
                 directory.mkdir(parents=True, exist_ok=True)
                 for index in range(1, int(attachments.Count) + 1):
                     item = attachments.Item(index)
-                    suffix = _safe_extension(_optional_attribute(item, "FileName"))
+                    original_name = _optional_attribute(item, "FileName")
+                    suffix = _safe_extension(original_name)
                     target = directory / f"attachment-{index}{suffix}"
                     try:
                         item.SaveAsFile(str(target))
@@ -889,7 +954,16 @@ class FileConverter:
                         logger.warning("Outlook MSG 附件提取失败 attachment=%d", index)
                         continue
                     if target.is_file():
-                        attachment_paths.append(target)
+                        attachment_paths.append(
+                            _MessageAttachment(
+                                target,
+                                _preserved_attachment_name(
+                                    original_name,
+                                    index,
+                                    suffix,
+                                ),
+                            )
+                        )
             return message_path, attachment_paths
         except MessageConversionError:
             raise

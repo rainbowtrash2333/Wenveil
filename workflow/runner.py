@@ -501,7 +501,7 @@ class WorkflowRunner:
         started = time.perf_counter()
         self._emit(progress, job_id, None, stage_name, "running", 0.02)
         if stage_name == "merge":
-            text = self._merged_text(job_id, checkpoint)
+            text = self._merged_text(job_id, checkpoint, request)
             if request.steps.mask:
                 path, digest, size = checkpoint.write_text(None, "merged", text)
                 artifact_id = self.store.add_artifact(
@@ -684,16 +684,41 @@ class WorkflowRunner:
         logger.write(event="job_finished", status=JobStatus.SUCCEEDED.value, size_bytes=output_path.stat().st_size)
         self._emit(progress, job_id, None, "restore", "done", 1.0)
 
-    def _merged_text(self, job_id: str, checkpoint: CheckpointStore) -> str:
-        chunks: list[str] = [f"# document-project-{safe_id(job_id)}", ""]
+    def _merged_text(
+        self,
+        job_id: str,
+        checkpoint: CheckpointStore,
+        request: ProcessRequest,
+    ) -> str:
+        if request.preserve_names:
+            title = self._merge_title(request.output_name)
+            chunks: list[str] = [f"# {title}", ""]
+        else:
+            chunks = [f"# document-project-{safe_id(job_id)}", ""]
         for row in self.store.get_items(job_id):
             if row["status"] != "succeeded":
                 continue
             text = self._item_text(job_id, row["item_id"])
-            chunks.extend([f"# ---- document-{safe_id(row['item_id'])} ----", "", text.strip(), ""])
+            if request.preserve_names:
+                item_title = Path(row["source_path"]).name
+            else:
+                item_title = f"document-{safe_id(row['item_id'])}"
+            chunks.extend([f"# ---- {item_title} ----", "", text.strip(), ""])
         if len(chunks) <= 2:
             raise WorkflowError("no_successful_items", "没有可合并的成功文件")
         return "\n".join(chunks)
+
+    @staticmethod
+    def _merge_title(output_name: str | None) -> str:
+        if not output_name:
+            return "merged-document"
+        name = Path(output_name).name
+        suffix = ".merged.md"
+        if name.casefold().endswith(suffix):
+            title = name[: -len(suffix)]
+            if title:
+                return title
+        return Path(name).stem or name
 
     def _merged_text_from_stage(self, job_id: str, checkpoint: CheckpointStore) -> str:
         stage = self.store.get_stage(job_id, None, "merge")
@@ -865,7 +890,10 @@ class WorkflowRunner:
             config = replace(config, ocr=replace(config.ocr, use_gpu=False, use_dml=False))
         elif request.device == "gpu":
             config = replace(config, ocr=replace(config.ocr, use_gpu=True, use_dml=False))
-        return DocumentConverter(config).convert(source) or ""
+        return DocumentConverter(
+            config,
+            preserve_names=request.preserve_names,
+        ).convert(source) or ""
 
     @staticmethod
     def _read_text(path: Path) -> str:
@@ -987,6 +1015,7 @@ class WorkflowRunner:
         return {
             "steps": request.steps.as_dict(),
             "output_name": request.output_name,
+            "preserve_names": request.preserve_names,
             "config_path": str(request.config_path.expanduser().resolve()) if request.config_path else None,
             "entities": list(request.entities),
             "ai_enhanced": request.ai_enhanced,
@@ -1027,6 +1056,7 @@ class WorkflowRunner:
             device=request.get("device", "auto"),
             retain_intermediate=bool(request.get("retain_intermediate", False)),
             allow_partial=bool(request.get("allow_partial", False)),
+            preserve_names=bool(request.get("preserve_names", False)),
         )
 
     @staticmethod

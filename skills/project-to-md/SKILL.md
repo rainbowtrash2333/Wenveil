@@ -15,6 +15,12 @@ description: 将一个输入根目录下各一级项目的受支持文档递归�
 python skills/project-to-md/scripts/project_to_md.py <输入根目录>
 ```
 
+如果用户明确要求沿用项目名和输入文件名，可显式启用原名模式：
+
+```powershell
+python skills/project-to-md/scripts/project_to_md.py <输入根目录> --preserve-names
+```
+
 例如：
 
 ```powershell
@@ -27,7 +33,10 @@ python skills/project-to-md/scripts/project_to_md.py .\test-artifacts\test_docs
 <输入根目录>/merged/document-<safe-id>.merged.md
 ```
 
-每个项目对应一个 Markdown 文件。输出文件名使用不可逆安全 ID，不回显原始项目名或文件名。
+每个项目对应一个 Markdown 文件。默认输出文件名使用不可逆安全 ID，不回显原始项目名或文件名。
+`--preserve-names` 仅在用户明确授权时使用：输出为
+`<输入根目录>/merged/<原始项目名>.merged.md`，合并标题使用原始项目名，每个文件分段标题保留原始文件名。
+该模式会把项目名和文件名写入交付 Markdown，不适合公开发布或未经授权的共享。
 
 ## 工作流和状态
 
@@ -37,6 +46,7 @@ python skills/project-to-md/scripts/project_to_md.py .\test-artifacts\test_docs
 - SQLite 状态库默认位于 `<输入根目录>/.wenveil/workflow.sqlite3`。
 - 日志和私有 checkpoint 位于 `<输入根目录>/.wenveil/`，不写入 Markdown 内容。
 - `--resume` 可按已存在的安全合并文件跳过已完成项目；不使用该参数时会重新处理并覆盖同名安全输出。
+- `--preserve-names` 可按用户要求使用原始项目名和文件名；默认关闭，避免意外泄露名称。
 
 ## 输入边界
 

@@ -65,6 +65,21 @@ def test_zip_archives_are_expanded_recursively_but_stop_at_three_layers(
     assert [path.suffix for path in converted] == [".txt"]
 
 
+def test_preserve_names_keeps_archive_names_in_converted_markdown(tmp_path: Path) -> None:
+    archive_path = tmp_path / "原始归档.zip"
+    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("部门/原始资料.txt", "archive text")
+
+    result = FileConverter(preserve_names=True).convert(
+        archive_path,
+        lambda path: path.read_text(encoding="utf-8"),
+    )
+
+    assert "## 归档内容 原始归档.zip" in result
+    assert "### 归档文件 1 (部门/原始资料.txt)" in result
+    assert "safe_id" not in result
+
+
 def test_zip_path_traversal_is_rejected_before_writing_outside_workspace(
     tmp_path: Path,
 ) -> None:
@@ -184,3 +199,11 @@ def test_msg_body_and_supported_attachments_are_converted_to_markdown(
     assert "message body" in result
     assert "<p>" not in result
     assert "attachment body" in result
+
+    preserved = FileConverter(preserve_names=True).convert(
+        source,
+        lambda path: path.read_text(encoding="utf-8"),
+    )
+
+    assert "### 邮件附件 1 (attachment.txt)" in preserved
+    assert "safe_id" not in preserved

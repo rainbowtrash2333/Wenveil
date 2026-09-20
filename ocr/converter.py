@@ -51,6 +51,8 @@ class DocumentConverter:
         self,
         config: Config,
         profile_session: Optional[ProfileSession] = None,
+        *,
+        preserve_names: bool = False,
     ):
         """初始化文档转换器。
 
@@ -58,6 +60,7 @@ class DocumentConverter:
             config: 全局配置对象。
         """
         self.config = config
+        self.preserve_names = preserve_names
         self.profile_session = profile_session
         if self.profile_session is None and config.profiling.enabled:
             self.profile_session = ProfileSession(
@@ -66,7 +69,10 @@ class DocumentConverter:
             )
         # Docling 很重；只有遇到 PDF/DOCX/PPTX/XLSX 时才初始化。
         self.docling_converter = None
-        self.file_converter = FileConverter(config.file_converter)
+        self.file_converter = FileConverter(
+            config.file_converter,
+            preserve_names=preserve_names,
+        )
         # 创建本地 OCR 引擎（用于图片文件的 OCR 识别）
         self.ocr_engine = LocalOcrEngine(config.ocr)
 
@@ -398,15 +404,20 @@ class DocumentConverter:
                     ocr_results = self.ocr_engine.ocr(image)
         except Exception:
             logger.warning("OCR 对 file_id=%s 识别失败，返回占位内容", safe_id(filepath.name))
+            if self.preserve_names:
+                return f"![{filepath.name}]({filepath.name})\n\n*[OCR 不可用]*\n"
             file_id = safe_id(filepath.name)
             return f"![document-{file_id}](document-{file_id})\n\n*[OCR 不可用]*\n"
 
         if not ocr_results:
+            if self.preserve_names:
+                return f"![{filepath.name}]({filepath.name})\n\n*[未检测到文字]*\n"
             file_id = safe_id(filepath.name)
             return f"![document-{file_id}](document-{file_id})\n\n*[未检测到文字]*\n"
 
+        image_title = filepath.name if self.preserve_names else f"document-{safe_id(filepath.name)}"
         if profile is None:
-            lines = [f"### 图片: document-{safe_id(filepath.name)}\n"]
+            lines = [f"### 图片: {image_title}\n"]
             for result in ocr_results:
                 if result.text.strip():
                     lines.append(f"{result.text}")
@@ -414,7 +425,7 @@ class DocumentConverter:
             return "\n".join(lines)
 
         with profile.stage("markdown.build"):
-            lines = [f"### 图片: document-{safe_id(filepath.name)}\n"]
+            lines = [f"### 图片: {image_title}\n"]
             for result in ocr_results:
                 if result.text.strip():
                     lines.append(f"{result.text}")
