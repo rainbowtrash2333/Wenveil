@@ -1,6 +1,6 @@
 # 版本与能力说明（APP-VERSION）
 
-> 版本：V0.11（2026-09-17）｜状态：生效
+> 版本：V0.12（2026-09-20）｜状态：生效
 > 本文档记录 Wenveil（文隐）的当前版本、已实现能力、验证结果和已知限制。
 > 阶段规划见 [ROADMAP.md](./ROADMAP.md)。
 
@@ -11,8 +11,8 @@
 | 版本号 | 0.2.0 |
 | 公开项目名 | Wenveil（文隐） |
 | Python 发行名 | `wenveil` |
-| 更新时间 | 2026-09-17 |
-| 对应提交 | `dev`，公开发布边界与独立 OCR/整理/脱敏模块 |
+| 更新时间 | 2026-09-20 |
+| 对应提交 | `dev`，统一工作流、OCR 文件前置转换、项目级批量合并与显式原名模式 |
 
 ## 2. 已实现能力
 
@@ -38,13 +38,13 @@
 | ONNX Runtime NER 部署 | 已实现（实验性） | 固定长度 ONNX 导出、PyTorch/ORT parity、DirectML 优先/CPU 回退；运行时不导入 PyTorch |
 | Tauri + React 桌面 UI | 开发版已实现 | `desktop/` 覆盖文件选择、处理/恢复、进度、结果、设置和浏览器 HTTP 开发适配器；Python 业务仍由 Sidecar 调用 |
 | 统一工作流与 SQLite 作业状态 | 已实现（开发版） | `workflow/` 提供 `WorkflowService`、SQLite 状态、阶段事件、私有 checkpoint、断点恢复、取消、统一 CLI；Sidecar 已迁移为适配器 |
-| 按项目批量转换并合并 Markdown | 已实现（开发版） | `skills/project-to-md/scripts/project_to_md.py` 递归处理一级项目目录，分别生成 `merged/document-<safe-id>.merged.md`，并复用统一工作流状态库 |
+| 按项目批量转换并合并 Markdown | 已实现（开发版） | `skills/project-to-md/scripts/project_to_md.py` 递归处理一级项目目录；默认生成 `merged/document-<safe-id>.merged.md`，显式 `--preserve-names` 时使用项目原名和输入文件原名，并复用统一工作流状态库 |
 
 ## 3. 验证结果
 
 | 类型 | 数量 | 结果 | 备注 |
 |------|------|------|------|
-| pytest 单元/集成测试 | 165 | 通过 | 另含统一工作流 SQLite、合并脱敏、无密码、等待密码、阶段故障恢复、checkpoint 篡改、租约互斥、取消、项目批量合并和文件前置转换回归 |
+| pytest 单元/集成测试 | 168 | 通过 | 另含统一工作流 SQLite、合并脱敏、无密码、等待密码、阶段故障恢复、checkpoint 篡改、租约互斥、取消、项目批量合并、文件前置转换和原名模式保留回归 |
 | OCR 性能基准 | 48 页 / 3 类 PDF | 通过 | 基线约 251.9 秒；优化后约 178.2 秒；OCR 页数和样本逐页结果计数保持一致 |
 | CLI 脱敏/审计/恢复验收 | 3 份输入 | 通过 | 三份 docs 输入均使用安全文件名；审计 0 问题，恢复哈希一致 |
 | 公共机构白名单回归 | 2 个测试场景 | 通过 | 正常白名单保留；白名单子串不放行更长私有机构 |
@@ -85,3 +85,5 @@
 | 0.2.0-dev5 | 2026-09-16 | 增加统一 WorkflowService、SQLite 作业状态、私有 checkpoint 断点恢复和 Sidecar 适配 |
 | 0.2.0-dev6 | 2026-09-17 | 完成五阶段故障恢复验收、checkpoint 完整性校验、输入指纹保护和作业租约互斥测试 |
 | 0.2.0-dev7 | 2026-09-17 | 增加 OCR 文件前置转换：旧版 Office、MSG、ZIP/RAR/7z 归档和最多三层递归展开 |
+| 0.2.0-dev8 | 2026-09-17 | 增加 `skills/project-to-md` 批量脚本：按一级项目递归转换受支持文件并分别生成 merged Markdown，复用统一工作流 SQLite 状态 |
+| 0.2.0-dev9 | 2026-09-20 | 项目级 merged 输出新增显式原名模式（默认关闭）：`--preserve-names`/`ProcessRequest.preserve_names` 覆盖 merged 标题、分段标题、归档成员和 MSG 附件名称；安全 ID 模式为默认行为 |

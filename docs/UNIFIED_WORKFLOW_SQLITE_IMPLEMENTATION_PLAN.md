@@ -1,6 +1,6 @@
 # 统一工作流服务与 SQLite 状态库实施方案
 
-> 版本：V0.3（2026-09-17）｜状态：阶段 D 恢复验收完成，持续迭代中
+> 版本：V0.4（2026-09-20）｜状态：阶段 D 恢复验收完成，持续迭代中
 > 本方案描述将 OCR、文本整理、文件合并、脱敏、审计和脱敏恢复统一到一个独立工作流服务中的实施方式。
 > 现有模块职责与数据安全边界仍以 [ARCHITECTURE.md](./ARCHITECTURE.md)、[MODULES.md](./MODULES.md)
 > 和 [ADR-0001](./adr/0001-hybrid-reversible-desensitization.md) 为准。
@@ -105,6 +105,7 @@ class ProcessRequest:
     retain_intermediate: bool = False
     allow_partial: bool = False
     output_name: str | None = None
+    preserve_names: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -203,7 +204,9 @@ OCR 和整理结果默认不作为用户产物发布。它们仅在启用断点�
 合并必须确定性执行：
 
 1. 输入文件按规范化相对路径和安全文件 ID 排序。
-2. 每个文件生成安全标题，不把原始文件名写入日志或审计报告。
+2. 每个文件生成安全标题，不把原始文件名写入日志或审计报告。`preserve_names` 默认关闭；仅对明确授权的
+   项目级 merged 输出（`skills/project-to-md --preserve-names`）允许在 merged 标题和分段标题中使用原始项目名与文件名，
+   该模式不改变日志、事件和 SQLite 中的安全字段边界。
 3. 文件内容只从已成功的文件级 checkpoint 读取。
 4. 任一必要文件失败时，默认阻止作业级合并；只有 `allow_partial=true` 才允许显式生成部分结果。
 5. 合并产物完成后使用临时文件写入，再通过原子重命名发布。

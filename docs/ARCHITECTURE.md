@@ -1,6 +1,6 @@
 # 总体架构（ARCHITECTURE）
 
-> 版本：V0.8（2026-09-17）｜状态：生效
+> 版本：V0.9（2026-09-20）｜状态：生效
 > 本文档描述 Wenveil（文隐）的分层、核心概念、数据流与目录结构；模块职责与依赖
 > 规则见 [MODULES.md](./MODULES.md)。
 
@@ -9,10 +9,10 @@
 1. 在可恢复模式下，`restore(mask(normalize(source))) == normalize(source)` 必须成立；模型不能改写文本。
 2. 所有识别器只返回不可变的 `Span`；重叠、优先级和保护策略统一由 Resolver 决定。
 3. 规则处理确定性字段，词典/注册表/可选本地 NER 处理语义实体；无模型时仍可离线运行。模型运行时可选 PyTorch Transformers 或不依赖 PyTorch 的 ONNX Runtime。
-4. 可恢复模式的 mapping 必须加密并绑定 masked 哈希；无密码模式不落盘 mapping，报告、日志和文件名不得泄露原始敏感值。
+4. 可恢复模式的 mapping 必须加密并绑定 masked 哈希；无密码模式不落盘 mapping，默认报告、日志和文件名不得泄露原始敏感值。项目级 merged skill 仅在用户明确授权时支持原名输出。
 5. 公共机构白名单是受保护 Span；白名单子串不能放行更长的非白名单机构。
 6. OCR、文本整理、脱敏分别提供独立 CLI；组合处理统一进入 `workflow/`，不把业务逻辑复制到 UI 或 Sidecar。
-7. 桌面端只负责文件选择、用户设置、进度和结果展示，通过 JSON Lines Sidecar 调用 `WorkflowService`。
+7. 桌面端只负责文件选择、用户设置、进度和结果展示，通过 JSON Lines Sidecar 调用 `WorkflowService`；`ProcessRequest.preserve_names` 默认关闭，仅供明确授权的项目级 merged 输出使用。
 8. SQLite 只保存作业状态、事件、路径、哈希和产物元数据；OCR/整理文本只在私有 checkpoint 中短暂保存。
 9. PDF OCR 必须先做页级预检；纯扫描文档可跳过不必要的结构化阶段，混合/复杂文档仍保留 Docling 兜底。
 10. OCR 进入 Docling/RapidOCR 前，旧版 Office、MSG 和归档统一经过受控的文件前置转换层；归档最多递归展开 3 层。

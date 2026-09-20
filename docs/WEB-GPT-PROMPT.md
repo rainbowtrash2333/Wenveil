@@ -1,6 +1,6 @@
 # Wenveil（文隐）Web GPT 项目上下文提示
 
-> 版本：V0.1（2026-09-16）｜状态：生效
+> 版本：V0.2（2026-09-20）｜状态：生效
 > 用途：将本文作为项目背景提示提供给 Web GPT，使其在不通读整个仓库的情况下理解 Wenveil 的目标、技术路线、目录职责和协作约束。
 
 ---
@@ -70,8 +70,9 @@ OCR、整理、脱敏各有自己的 CLI 和编排入口，可以分开使用，
 ```text
 Wenveil/
 ├── common/                  # OCR 文本规整、安全 ID 等共享确定性工具
-├── ocr/                     # OCR 转换；CLI、发现、引擎、转换、合并和流水线
+├── ocr/                     # OCR 转换；CLI、发现、引擎、转换、合并、流水线和 Office/MSG/归档前置转换
 ├── organize/                # OCR Markdown/纯文本的确定性整理
+├── workflow/                # 统一处理入口：WorkflowService、SQLite 作业状态、checkpoint、恢复和 CLI
 ├── desensitize/             # 脱敏 CLI、流水线、Span、识别器、Resolver、mapping、audit
 │   ├── recognizers/         # 结构规则、词典、机构/人员、可选 Transformers 和 ONNX NER
 │   ├── normalizer/          # 脱敏兼容入口；共享规整逻辑在 common/
@@ -86,13 +87,15 @@ Wenveil/
 ├── rules/                   # 公共规则、机构注册表和白名单模板
 ├── tests/                   # pytest 回归及非用户数据 fixtures
 ├── docs/                    # 架构、规范、ADR、路线图及本提示文档
-├── skills/                  # 项目级 AI 脱敏调用规范
+├── skills/                  # 项目级 AI skill：脱敏调用规范与按项目批量合并 Markdown
 ├── test-artifacts/          # 本地测试/调试产物，禁止提交
 ├── pyproject.toml           # Python 包元数据、依赖 extra、CLI 和测试配置
 └── AGENTS.md                # 仓库内 AI 助手项目约定
 ```
 
-关键代码入口：`ocr/cli.py` → `ocr/pipeline.py`；`organize/cli.py` → `organize/core.py`；`desensitize/cli.py` → `desensitize/pipeline.py`。桌面 JSON Lines 协议和调用编排在 `desktop/bridge/sidecar.py`。以上路径用于定位相关代码，不代表必须通读整个目录。
+关键代码入口：`ocr/cli.py` → `ocr/pipeline.py`；`organize/cli.py` → `organize/core.py`；`desensitize/cli.py` → `desensitize/pipeline.py`；`workflow/api.py` → `workflow/runner.py`。桌面 JSON Lines 协议和调用编排在 `desktop/bridge/sidecar.py`。以上路径用于定位相关代码，不代表必须通读整个目录。
+
+组合处理（OCR、整理、合并、脱敏、审计、恢复）统一走 `workflow/`：`WorkflowService` 编排各阶段，SQLite 只保存作业状态、事件、路径、哈希和产物元数据，中间文本只写入应用私有 checkpoint，成功后清理。Desktop Sidecar 已迁移为该服务的适配器，不复制工作流逻辑。
 
 ## 模块和依赖边界
 
@@ -108,17 +111,18 @@ Wenveil/
 - Python 3.10+；基础运行时依赖 PyYAML 与 cryptography；测试使用 pytest。
 - OCR 重依赖通过 `[ocr]` extra 安装；模型/训练依赖通过 `[model]` 等 extra 安装。
 - 桌面端使用 Tauri 2、React、TypeScript、Vite，Rust 原生壳通过 Cargo 构建/检查。
-- 独立 CLI：`python -m ocr`、`python -m organize`、`python -m desensitize`；安装脚本入口分别为 `ocr-convert`、`organize-text`、`desense`。
+- 独立 CLI：`python -m ocr`、`python -m organize`、`python -m desensitize`；安装脚本入口分别为 `ocr-convert`、`organize-text`、`desense`。组合处理使用统一工作流：`python -m workflow`（`process`/`status`/`resume`）。
 
 常用验证命令：
 
 ```powershell
 python -m pip install -e .
-python -m compileall -q common desensitize ocr organize training
+python -m compileall -q common desensitize ocr organize training workflow
 pytest -q
 python -m ocr --help
 python -m organize --help
 python -m desensitize --help
+python -m workflow --help
 
 cd desktop
 npm install
@@ -135,18 +139,24 @@ cargo check --manifest-path src-tauri/Cargo.toml
 - `test-artifacts/` 用于本地产物，不入库。授权输入和各阶段产物按仓库 `AGENTS.md`、开发指南的子目录约定存放。
 - 日志、异常、报告和 UI 消息不得包含原始敏感 surface、密码、mapping 明文、原始文件名或内部堆栈；诊断优先保留安全 ID、计数、行号、哈希和固定摘要。
 - 项目公共规则文件是模板和通用规则的边界。客户/项目专属词典应通过本地配置提供，不能写进公开仓库。
-- 安全文件名采用不可逆 `document-<safe-id>`，不要沿用输入文件名。mapping 含可恢复数据，必须按敏感文件处理。
+- 安全文件名采用不可逆 `document-<safe-id>`，不要沿用输入文件名。唯一例外是项目级批量合并 skill 的显式原名模式
+  （`skills/project-to-md --preserve-names` / `ProcessRequest.preserve_names`）：仅在用户明确授权时启用，默认关闭；
+  该模式会把项目名和文件名写入交付 Markdown，不得用于公开发布或未经授权的共享。
+- mapping 含可恢复数据，必须按敏感文件处理。
 - Web GPT 是在线服务。若任务涉及用户文档，应优先使用合成样例或已经批准的脱敏材料；不要把未经授权的原文、mapping 或密码放入提示词。
 
 ## 当前状态与限制
 
-以下状态依据仓库 `docs/APP-VERSION.md` 和 `docs/ROADMAP.md`（截至 2026-09-14）：
+以下状态依据仓库 `docs/APP-VERSION.md` 和 `docs/ROADMAP.md`（截至 2026-09-20）：
 
-- Python 发行版本为 `0.2.0`。独立 OCR、文本整理和可逆脱敏已实现；Tauri + React 桌面端处于开发版。
+- Python 发行版本为 `0.2.0`。独立 OCR、文本整理和可逆脱敏已实现；统一工作流（`workflow/` + SQLite 作业状态、私有 checkpoint 断点恢复）已实现为开发版；Tauri + React 桌面端处于开发版。
+- OCR 前置转换已实现：旧版 `.doc/.xls/.ppt`、`.msg`、`.zip/.rar/.7z` 等归档进入主链路前先经受控临时转换，归档最多递归展开 3 层。
+- 批量处理已可用：`skills/project-to-md` 按一级项目目录递归转换并分别生成 merged Markdown，默认使用安全 ID 文件名和标题；显式 `--preserve-names` 原名模式仅限明确授权的项目级输出。
 - 规则/词典链可在不启用模型时离线运行。Qwen3.5 与 ONNX 推理属于实验性可选能力；模型权重不在仓库中。
 - 合成集、固定切分适配、训练/评估/ONNX 导出路径已实现，但授权真实语料验证和正式质量门槛仍待完成。不要以合成数据指标替代真实使用质量结论。
-- 桌面 Sidecar 与目录分发工具已具备；安装包签名、升级/回滚演练及更完整的发布验收仍未完成。
-- 批量目录处理、性能基线等仍在路线图中。白名单为精确词典，需要人工评审和维护；Audit 只覆盖已定义的风险形态，不能证明不存在所有残留。
+- 48 页三类 PDF 性能基线已完成（见 `OCR_OPTIMIZATION_REPORT.md`）；页级 OCR 缓存和真实 DirectML/CUDA provider 基准仍在路线图中。
+- 桌面 Sidecar 与目录分发工具已具备；安装包签名、升级/回滚演练及更完整的发布验收仍未完成。统一工作流的并发 worker、长任务心跳调度、checkpoint 保留策略产品化配置和 UI 作业历史仍待后续迭代。
+- 白名单为精确词典，需要人工评审和维护；Audit 只覆盖已定义的风险形态，不能证明不存在所有残留。
 
 若后续仓库文件与本摘要不一致，以当前可验证代码和仓库 `docs/APP-VERSION.md`、`docs/ROADMAP.md` 为准，并指出摘要可能过时。不要静默把规划项写成已完成。
 

@@ -1,6 +1,6 @@
 # 路线图（ROADMAP）
 
-> 版本：V0.8（2026-09-17）｜状态：生效
+> 版本：V0.9（2026-09-20）｜状态：生效
 > 本文档定义 Wenveil（文隐）的阶段目标与里程碑；当前能力清单见
 > [APP-VERSION.md](./APP-VERSION.md)。
 
@@ -42,7 +42,7 @@
 - [x] 提取独立 OCR 文本整理模块，提供 `organize` CLI；三个功能模块可单独调用。
 - [x] 建立 Tauri + React 桌面开发 UI，覆盖处理、恢复、进度、结果和设置；通过 JSON Lines Sidecar 复用 Python 模块。
 - [ ] 完成离线发布包签名和升级/回滚演练；PyInstaller onedir sidecar 与模型目录已可组装为目录分发。
-- [x] 批量目录处理、任务级安全 ID 和可观测计数；`skills/project-to-md` 已支持按项目生成 merged Markdown，状态进入 SQLite。
+- [x] 批量目录处理、任务级安全 ID 和可观测计数；`skills/project-to-md` 已支持按项目生成 merged Markdown，状态进入 SQLite；支持显式 `--preserve-names` 原名模式（默认关闭，仅限明确授权的项目级输出）。
 - [x] 建立三类 PDF 的吞吐/阶段基线，并完成页级预检与纯扫描快速 OCR。
 - [ ] 建立页级 OCR 缓存，避免同一 PDF 或未变化页重复 OCR。
 - [ ] 在实际 DirectML/CUDA provider 上完成硬件加速基准和内存回归。
@@ -81,3 +81,4 @@
 | 2026-09-17 | 阶段 4 | 完成 OCR/整理/合并/脱敏/审计阶段故障注入恢复、checkpoint 完整性和作业租约验收；输入文件变化会被安全拒绝 |
 | 2026-09-17 | 阶段 4 | 增加旧版 Office/MSG 转换、ZIP/RAR/7z 受控解压和三层嵌套归档安全边界 |
 | 2026-09-17 | 阶段 4 | 新增 `skills/project-to-md` 批量脚本：按一级项目递归处理受支持文件，分别生成 merged Markdown，并保留 SQLite 状态 |
+| 2026-09-20 | 阶段 4 | 项目级 merged 输出新增显式原名模式（默认关闭）：`--preserve-names`/`ProcessRequest.preserve_names` 覆盖 merged 标题、分段标题、归档成员和 MSG 附件名称，安全 ID 模式保持不变 |

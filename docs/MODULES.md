@@ -1,6 +1,6 @@
 # 模块边界（MODULES）
 
-> 版本：V0.7（2026-09-17）｜状态：生效
+> 版本：V0.8（2026-09-20）｜状态：生效
 > 本文档定义 Wenveil（文隐）的模块职责、边界与依赖规则；分层总览见
 > [ARCHITECTURE.md](./ARCHITECTURE.md)。
 
@@ -40,10 +40,11 @@
 - Training 不进入生产运行链路，生产包不得依赖可选训练框架。
 - ONNX recognizer 只依赖 `tokenizers`、`numpy` 和 ONNX Runtime；不导入 PyTorch、训练代码或 checkpoint optimizer 状态。
 - Audit 不回显命中的敏感文本，只输出类别、行号和固定摘要。
-- Workflow 只做跨模块编排和状态持久化，不把文本内容写入 SQLite；中间文本只写入应用私有 checkpoint，成功后清理。
+- Workflow 只做跨模块编排和状态持久化，不把文本内容写入 SQLite；中间文本只写入应用私有 checkpoint，成功后清理。`ProcessRequest.preserve_names` 默认关闭，项目级 merged skill 明确授权时才在 Markdown 标题中保留原始项目名和文件名。
 - Workflow 的密码只存在调用栈中；数据库、事件、日志和快照不写入密码、原文、Token 映射值或原始文件名。
 - File Converter 的 Office COM、`extract-msg` 和 7-Zip 均为 OCR 前置依赖；中间文件只写入任务临时目录，
-  不写回原始目录，不将归档成员原名写入日志或输出标题。
+  不写回原始目录。默认不将归档成员或邮件附件原名写入日志或输出标题，统一使用安全 ID；仅当调用方显式启用
+  `preserve_names`（项目级 merged skill 明确授权）时，才在转换结果的归档成员和附件标题中保留原名。
 - Desktop UI/Sidecar 不实现实体识别、冲突解析或映射恢复规则；前端只传递文件、可选密码和设置，并展示可恢复/不可恢复结果。浏览器 HTTP 适配器仅监听 loopback，Tauri 负责桌面窗口和 Sidecar 生命周期。
 
 ## 3. 依赖规则（强制）

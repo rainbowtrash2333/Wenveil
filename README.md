@@ -59,6 +59,29 @@ python -m organize .\test-artifacts\ocr-outputs\document-<safe-id>.ocr.md
 
 默认整理输出到 `test-artifacts/organized-outputs/`，可用 `-o` 指定文件或目录。
 
+### 统一工作流与批量处理
+
+组合 OCR、整理、合并、脱敏、审计和恢复时使用统一工作流入口 `python -m workflow`（也可用
+`wenveil-workflow`）：作业状态、事件和产物元数据写入 SQLite，中间 OCR/整理文本只进入应用私有
+checkpoint，成功后清理；中断后可按作业 ID 从最近有效阶段恢复。
+
+```powershell
+python -m workflow --help
+python -m workflow process .\input-a.md .\input-b.pdf -o .\output --password $env:DESENSE_PASSWORD
+python -m workflow status <job-id>
+python -m workflow resume <job-id> --password $env:DESENSE_PASSWORD
+```
+
+按项目批量转换并分别合并为 Markdown（默认输出 `merged/document-<safe-id>.merged.md`，文件名和标题不使用原名）：
+
+```powershell
+python skills/project-to-md/scripts/project_to_md.py .\test-artifacts\test_docs
+```
+
+仅当用户明确授权时，可加 `--preserve-names` 使用原始项目名和输入文件名；该模式只影响项目级 merged
+输出的文件名和分段标题，不应把输出公开或提交到仓库。详见
+[`docs/DEV-TOOLCHAIN.md`](docs/DEV-TOOLCHAIN.md)。
+
 ### 桌面端开发版
 
 桌面端位于 [`desktop/`](desktop/)，使用 Tauri + React 调用 Python Sidecar；它覆盖文件选择、处理、可逆恢复、进度、结果和设置。

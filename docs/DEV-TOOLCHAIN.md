@@ -1,6 +1,6 @@
 # 开发工具链（DEV-TOOLCHAIN）
 
-> 版本：V0.9（2026-09-17）｜状态：生效
+> 版本：V0.10（2026-09-20）｜状态：生效
 > 本文档记录 Wenveil（文隐）的安装、编译、测试、调试和 CLI 验收命令。
 
 ## 1. 环境要求
@@ -113,7 +113,13 @@ python -m workflow resume <job-id> --password $env:DESENSE_PASSWORD
 
 # 按一级项目目录批量转换并分别合并为 Markdown
 python skills/project-to-md/scripts/project_to_md.py .\test-artifacts\test_docs
+
+# 用户明确授权时，使用项目原名和输入文件原名
+python skills/project-to-md/scripts/project_to_md.py .\test-artifacts\test_docs --preserve-names
 ```
+
+`--preserve-names` 只影响项目级 merged 输出的文件名和分段标题；默认安全 ID 模式保持不变，
+原名模式不应将输出公开或提交到仓库。
 
 ## 4. 配置、规则与脱敏运行
 
